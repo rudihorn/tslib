@@ -160,7 +160,6 @@ impl Display for I2CError {
             I2CError::BERR => write!(f, "BERR")
         }
     }
-
 }
 
 type_states!(IsConfigured, (NotConfigured, Configured));
@@ -267,10 +266,52 @@ impl<'a, S> I2cPortMode<'a, S, NotSelected> where S: Any + I2C {
     }
 } */
 
+type_states!(I2cStates, (Start, Read, Write));
+
+pub struct I2cState<'a, S : Any + I2C, ST : I2cStates>(pub &'a S, PhantomData<ST>);
+
+pub enum I2cStateOptions<'a, S: Any + I2C> {
+    Started(I2cState<'a, S, Start>),
+    CanRead(I2cState<'a, S, Read>),
+    CanWrite(I2cState<'a, S, Write>),
+    Unknown
+}
+
 pub struct I2c<'a, S>(pub &'a S)
 where 
     S: Any + I2C; 
 
+impl<'a, S: Any + I2C> I2cState<'a, S, Start> {
+
+    #[inline(always)]
+    pub fn write_address(&self, addr : u8, read : bool) {
+        let dat = (addr << 1) | (if read {1} else {0});
+        self.0.dr.write(|w| unsafe { w.bits(dat as u32) });
+    }
+
+    #[inline(always)]
+    pub fn stop(&self) {
+        self.0.cr1.modify(|_,w| { w.stop().set_bit() });
+    }
+}
+
+impl<'a, S: Any + I2C> I2cState<'a, S, Write> {
+
+    #[inline(always)]
+    pub fn suspend(&self) {
+        self.0.cr2.modify(|_, w| {w.itevten().clear_bit()})
+    }
+
+    #[inline(always)]
+    pub fn write(&self, dat: u8) {
+        self.0.dr.write(|w| unsafe { w.bits(dat as u32) });
+    }
+
+    #[inline(always)]
+    pub fn stop(&self) {
+        self.0.cr1.modify(|_,w| { w.stop().set_bit() });
+    }
+}
 
 /* 
 impl<'a, S> I2c<'a, S, NotSelected> 
@@ -543,13 +584,13 @@ where
     } */
 
     #[inline(always)]
-    fn is_busy(&self) -> bool {
+    pub fn is_busy(&self) -> bool {
         let i2c = self.0;
         i2c.sr2.read().busy().bit_is_set()
     }
 
     #[inline(always)]
-    fn enable_start(&self) {
+    pub fn enable_start(&self) {
         let i2c = self. 0;
         i2c.cr1.modify(|_, w| {w.start().set_bit()});
     }
@@ -558,5 +599,23 @@ where
     fn enable_stop(&self) {
         let i2c = self.0;
         i2c.cr1.modify(|_, w| {w.stop().set_bit()});
+    }
+
+
+    pub fn get_state(&self) -> I2cStateOptions<'a, S> {
+        let sr1 = self.0.sr1.read();
+
+        if sr1.sb().bit_is_set() {
+            I2cStateOptions::Started(I2cState(&self.0, PhantomData))
+        } else if sr1.addr().bit_is_set() {
+            let b = self.0.sr2.read();
+            I2cStateOptions::CanWrite(I2cState(&self.0, PhantomData))
+        } else if sr1.tx_e().bit_is_set() {
+            I2cStateOptions::CanWrite(I2cState(&self.0, PhantomData))
+        } else if sr1.rx_ne().bit_is_set() {
+            I2cStateOptions::CanRead(I2cState(&self.0, PhantomData))
+        } else {
+            I2cStateOptions::Unknown
+        }
     }
 }

@@ -335,7 +335,7 @@ impl<'a, G> Gpio<'a, G> where G: GPIO {
         GpioPin<'a, G, Pin2, Input, PinCnf1>, 
         GpioPin<'a, G, Pin3, Input, PinCnf1>, 
         GpioPin<'a, G, Pin4, Input, PinCnf1>, 
-        GpioPin<'a, G, Pin5, Input, PinCnf1>, 
+        GpioPin<'a, G, Pin5, Input, PinCnf1>, /* ... */
         GpioPin<'a, G, Pin6, Input, PinCnf1>, 
         GpioPin<'a, G, Pin7, Input, PinCnf1>, 
         GpioPin<'a, G, Pin8, Input, PinCnf1>, 
