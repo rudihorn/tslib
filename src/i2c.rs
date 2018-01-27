@@ -11,7 +11,6 @@
 //! - SDA = PB11
 
 #[allow(unused_imports)]
-#[macro_use]
 use common;
 
 use core::any::{Any, TypeId};
@@ -20,7 +19,7 @@ use core::ops::Deref;
 use core::marker::PhantomData;
 use core::mem::transmute;
 
-use blue_pill::stm32f103xx::{AFIO, GPIOB, I2C1, I2C2, i2c1, RCC};
+use stm32f103xx::{AFIO, GPIOB, I2C1, I2C2, i2c1, RCC};
 
 use ::gpio::*;
 use ::afio::*;
@@ -226,9 +225,9 @@ where S: Any + I2C, P: IsConfigured;
 impl<'a> I2cBusPorts<'a, I2C1, NotConfigured> {
     #[inline(always)]
     pub fn set_ports_normal<M>(self, 
-        pb6 : GpioPin<'a, GPIOB, Pin6, M, PinCnf3>, 
-        pb7 : GpioPin<'a, GPIOB, Pin7, M, PinCnf3>,
-        afio_i2c : AfioI2C1Peripheral<'a, NotRemapped>) 
+        _pb6 : GpioPin<'a, GPIOB, Pin6, M, PinCnf3>, 
+        _pb7 : GpioPin<'a, GPIOB, Pin7, M, PinCnf3>,
+        _afio_i2c : AfioI2C1Peripheral<'a, NotRemapped>) 
         -> I2cBusPorts<'a, I2C1, Configured> where M : PinOutput + PinMode {
             unsafe {
                 transmute(self)
@@ -237,9 +236,9 @@ impl<'a> I2cBusPorts<'a, I2C1, NotConfigured> {
 
     #[inline(always)]
     pub fn set_ports_remapped<M>(self, 
-        pb8 : GpioPin<'a, GPIOB, Pin8, M, PinCnf3>, 
-        pb9 : GpioPin<'a, GPIOB, Pin9, M, PinCnf3>,
-        afio_i2c : AfioI2C1Peripheral<'a, Remapped>) 
+        _pb8 : GpioPin<'a, GPIOB, Pin8, M, PinCnf3>, 
+        _pb9 : GpioPin<'a, GPIOB, Pin9, M, PinCnf3>,
+        _afio_i2c : AfioI2C1Peripheral<'a, Remapped>) 
         -> I2cBusPorts<'a, I2C1, Configured> where M : PinOutput + PinMode {
             unsafe {
                 transmute(self)
@@ -356,10 +355,10 @@ where
     }
 
     pub fn complete_init<M>(&self, 
-        bsm : I2cBusSpeedMode<'a, S, M>, 
-        freq : I2cFrequency<'a, S, Configured>,
-        trise : I2cTrise<'a, S, Configured>,
-        bp : I2cBusPorts<'a, S, Configured>
+        _bsm : I2cBusSpeedMode<'a, S, M>, 
+        _freq : I2cFrequency<'a, S, Configured>,
+        _trise : I2cTrise<'a, S, Configured>,
+        _bp : I2cBusPorts<'a, S, Configured>
     ) where M : BusSpeedMode + BusSpeedModeConfigured {
         self.0.cr1.modify(|_, w| {w.pe().set_bit()});
     }
@@ -516,7 +515,7 @@ where
 
     #[inline(always)]
     pub fn start_read(&self, addr : u8) {
-        let dat = (addr << 1);
+        let dat = (addr << 1) | 0;
         self.0.dr.write(|w| unsafe { w.bits(dat as u32) });
     }
 
@@ -608,7 +607,7 @@ where
         if sr1.sb().bit_is_set() {
             I2cStateOptions::Started(I2cState(&self.0, PhantomData))
         } else if sr1.addr().bit_is_set() {
-            let b = self.0.sr2.read();
+            let _b = self.0.sr2.read();
             I2cStateOptions::CanWrite(I2cState(&self.0, PhantomData))
         } else if sr1.tx_e().bit_is_set() {
             I2cStateOptions::CanWrite(I2cState(&self.0, PhantomData))

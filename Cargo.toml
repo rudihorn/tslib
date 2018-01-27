@@ -8,14 +8,5 @@ version = "0.1.0"
 authors = ["Rudi Horn <dyn-git@rudi-horn.de>"]
 
 [dependencies]
-cortex-m-rtfm = "0.2.1"
-
-[dependencies.blue-pill]
-git = "https://github.com/japaric/blue-pill"
-
-[dependencies.cortex-m]
-version = "0.3.0"
-
-[dependencies.cortex-m-rt]
-features = ["abort-on-panic"]
-version = "0.3.3"
+cortex-m = "0.4.3"
+stm32f103xx = "0.8.0"

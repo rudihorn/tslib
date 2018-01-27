@@ -1,9 +1,8 @@
 
 #[allow(unused_imports)]
-#[macro_use]
 use common;
 
-use blue_pill::stm32f103xx::{AFIO, SPI1, SPI2};
+use stm32f103xx::{AFIO, SPI1, SPI2};
 
 use core::mem::transmute;
 use core::marker::PhantomData;

@@ -1,13 +1,12 @@
 
 
 #[allow(unused_imports)]
-#[macro_use]
 use common;
 
 use ::core::marker::PhantomData;
 use ::core::mem::transmute;
 
-use blue_pill::stm32f103xx::{RCC, GPIOA, GPIOB, GPIOC, I2C1, I2C2, SPI1, SPI2};
+use stm32f103xx::{RCC, GPIOA, GPIOB, GPIOC, I2C1, I2C2, SPI1, SPI2};
 use gpio::GPIO;
 use spi::SPI;
 

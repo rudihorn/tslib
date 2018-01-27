@@ -1,13 +1,12 @@
 
 #[allow(unused_imports)]
-#[macro_use]
 use common;
 
 use core::mem::transmute;
 use core::marker::PhantomData;
 use core::ops::Deref;
 
-use blue_pill::stm32f103xx::{gpioa, GPIOA, GPIOB, GPIOC, GPIOD};
+use stm32f103xx::{gpioa, GPIOA, GPIOB, GPIOC, GPIOD};
 
 
 

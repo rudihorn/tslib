@@ -1,6 +1,5 @@
 
 #[allow(unused_imports)]
-#[macro_use]
 use common;
 
 use core::any::Any;
@@ -12,7 +11,7 @@ use core::mem::transmute;
 
 use gpio::{Input, PinOutput, GpioPin, Pin4, Pin5, Pin6, Pin7, Pin12, Pin13, Pin14, Pin15, PinMode, PinCnf1, PinCnf2};
 use afio::{AfioSPIPeripheral, NotRemapped};
-use blue_pill::stm32f103xx::{GPIOA, GPIOB, SPI1, SPI2, spi1, gpioa};
+use stm32f103xx::{GPIOA, GPIOB, SPI1, SPI2, spi1, gpioa};
 
 
 type_states!(IsConfigured, (NotConfigured, Configured));
@@ -98,10 +97,10 @@ where S: Any + SPI, P: IsConfigured;
 impl<'a> SpiBusPorts<'a, SPI2, NotConfigured> {
     #[inline(always)]
     pub fn set_ports<M>(self, 
-        pb12 : GpioPin<'a, GPIOB, Pin12, M, PinCnf2>, 
-        pb13 : GpioPin<'a, GPIOB, Pin13, M, PinCnf2>,
-        pb14 : GpioPin<'a, GPIOB, Pin14, Input, PinCnf1>,
-        pb15 : GpioPin<'a, GPIOB, Pin15, M, PinCnf2>) 
+        _pb12 : GpioPin<'a, GPIOB, Pin12, M, PinCnf2>, 
+        _pb13 : GpioPin<'a, GPIOB, Pin13, M, PinCnf2>,
+        _pb14 : GpioPin<'a, GPIOB, Pin14, Input, PinCnf1>,
+        _pb15 : GpioPin<'a, GPIOB, Pin15, M, PinCnf2>) 
         -> SpiBusPorts<'a, SPI2, Configured> where M : PinOutput + PinMode {
             unsafe {
                 transmute(self)
@@ -112,11 +111,11 @@ impl<'a> SpiBusPorts<'a, SPI2, NotConfigured> {
 impl<'a> SpiBusPorts<'a, SPI1, NotConfigured> {
     #[inline(always)]
     pub fn set_ports_normal<M>(self, 
-        pa4 : GpioPin<'a, GPIOA, Pin4, M, PinCnf2>, 
-        pa5 : GpioPin<'a, GPIOA, Pin5, M, PinCnf2>,
-        pa6 : GpioPin<'a, GPIOA, Pin6, Input, PinCnf1>,
-        pa7 : GpioPin<'a, GPIOA, Pin7, M, PinCnf2>,
-        afio_spi : AfioSPIPeripheral<'a, SPI1, NotRemapped>) 
+        _pa4 : GpioPin<'a, GPIOA, Pin4, M, PinCnf2>, 
+        _pa5 : GpioPin<'a, GPIOA, Pin5, M, PinCnf2>,
+        _pa6 : GpioPin<'a, GPIOA, Pin6, Input, PinCnf1>,
+        _pa7 : GpioPin<'a, GPIOA, Pin7, M, PinCnf2>,
+        _afio_spi : AfioSPIPeripheral<'a, SPI1, NotRemapped>) 
         -> SpiBusPorts<'a, SPI1, Configured> where M : PinOutput + PinMode {
             unsafe {
                 transmute(self)
@@ -151,43 +150,39 @@ where S: Any + SPI,
     }
 
     pub fn complete_init(&self,
-        bus_ports : SpiBusPorts<'a, S, Configured>
+        _bus_ports : SpiBusPorts<'a, S, Configured>
         ) {
         let spi = self.0;
 
-        unsafe{ 
-            // enable slave select
-            spi.cr2.modify(|_, w| { w.ssoe().set_bit() });
+        // enable slave select
+        spi.cr2.modify(|_, w| { w.ssoe().set_bit() });
 
-            spi.cr1.write(|w| {
-                w.cpha()
-                .set_bit()
-                .cpol()
-                .set_bit()
-                .mstr()
-                .set_bit()
-                .br()
-                .bits(0b10)
-                .lsbfirst()
-                .clear_bit()
-                .ssm()
-                .clear_bit()
-                .rxonly()
-                .clear_bit()
-                .dff()
-                .clear_bit()
-                .bidimode()
-                .clear_bit()
-            });
-        }
+        spi.cr1.write(|w| {
+            w.cpha()
+            .set_bit()
+            .cpol()
+            .set_bit()
+            .mstr()
+            .set_bit()
+            .br()
+            .bits(0b10)
+            .lsbfirst()
+            .clear_bit()
+            .ssm()
+            .clear_bit()
+            .rxonly()
+            .clear_bit()
+            .dff()
+            .clear_bit()
+            .bidimode()
+            .clear_bit()
+        });
     }
 
     pub fn listen(&self) {
         let spi = self.0;
 
-        unsafe { 
-            spi.cr2.modify(|_,w| { w.txeie().set_bit().rxneie().set_bit().errie().set_bit() });
-        }
+        spi.cr2.modify(|_,w| { w.txeie().set_bit().rxneie().set_bit().errie().set_bit() });
     }
 
     /// Disables the SPI bus
