@@ -59,17 +59,6 @@ impl I2CWriteState {
 
 type I2CReadState = I2CState;
 
-/* impl<T> I2CReadState<T> {
-    pub fn cont<F,T2>(&self, f : F) -> I2CReadState<T2> 
-    where F : Fn(T) -> I2CReadState<T2> {
-        match self.0 {
-            I2CState::Ok => f(self.1.unwrap()),
-            I2CState::Busy => I2CReadState(I2CState::Busy, None),
-            I2CState::Error(err) => I2CReadState(I2CState::Error(err), None)
-        }
-    }
-} */
-
 impl I2CState {
     #[inline(always)]
     pub fn is_ok(&self) -> bool {
@@ -86,17 +75,6 @@ impl I2CState {
             _ => false
         }
     }
-
-    /* 
-    #[inline(always)]
-    pub fn cont<T>(&self, fun : T) -> I2CState
-        where T : Fn() -> I2CState {
-            if self.is_ok() {
-                fun()
-            } else {
-                *self
-            }
-        } */
 }
 
 impl Display for I2CState {
@@ -246,25 +224,6 @@ impl<'a> I2cBusPorts<'a, I2C1, NotConfigured> {
         }
 }
 
-
-/* type_states!(PortMode, (NotSelected, NormalPorts, AlternativePorts));
-
-pub struct I2cPortMode<'a, S, PortMode>(pub &'a S, PhantomData<PortMode>)
-where S: Any + I2C;
-
-impl<'a, S> I2cPortMode<'a, S, NotSelected> where S: Any + I2C {
-    pub fn set_normal_ports(self) -> I2cPortMode<'a, S, NormalPorts> {
-        unsafe { transmute(self) }
-    }
-
-    pub fn set_alt_ports(self) -> I2cPortMode<'a, S, AlternativePorts> {
-        unsafe {
-            self.0.afio.mapr.modify(|_, w| {w.i2c1_remap().set_bit()});
-            transmute(self) 
-        }
-    }
-} */
-
 type_states!(I2cStates, (Start, Read, Write));
 
 pub struct I2cState<'a, S : Any + I2C, ST : I2cStates>(pub &'a S, PhantomData<ST>);
@@ -312,33 +271,11 @@ impl<'a, S: Any + I2C> I2cState<'a, S, Write> {
     }
 }
 
-/* 
-impl<'a, S> I2c<'a, S, NotSelected> 
-where 
-    S: Any + I2C {
-    pub fn use_normal_ports(self) -> I2c<'a, S, NormalPorts> {
-        unsafe { transmute(self) }
-    }
-} */
-
-//impl_repl!(I2c, NormalPorts; ab, ad, bc; ; );
-
-
 
 impl<'a, S> I2c<'a, S>
 where
     S: Any + I2C
 {
-    /*
-    /// By default I2C1 uses PB6 (SCL) and PB7 (SDA).
-    /// This function allows us to remap it to PB8 (SCL) and PB9 (SDA).
-    /// I2C2 only uses PB10 (SCL) and PB11 (SDA)
-    fn use_remap(&self, afio: &AFIO) {
-        let i2c = self.0;
-
-        if i2c.get_type_id() == TypeId::of::<I2C1>() {
-        }
-    }*/
 
     pub fn start_init(&self) -> (
         I2cBusSpeedMode<'a, S, NotSelected>,
@@ -575,12 +512,6 @@ where
         self.enable_stop();
         I2CState::Ok
     }
-
-/*
-    pub fn write_data_polling(&self, dat : u8) -> I2CState {
-        self.write_data(dat);
-        self.poll_loop(|| {self.is_byte_transfer_finished()});
-    } */
 
     #[inline(always)]
     pub fn is_busy(&self) -> bool {
