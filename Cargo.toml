@@ -9,4 +9,6 @@ authors = ["Rudi Horn <dyn-git@rudi-horn.de>"]
 
 [dependencies]
 cortex-m = "0.4.3"
-stm32f103xx = "0.8.0"
+
+[dependencies.stm32f103xx-hal]
+path = "../stm32f103xx-hal"

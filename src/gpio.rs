@@ -48,6 +48,8 @@ type_states!(PinMode, (Input, Output10, Output2, Output50));
 type_group!(PinOutput, (Output10, Output2, Output50));
 type_states!(PinCnf, (PinCnf0, PinCnf1, PinCnf2, PinCnf3));
 
+pub type GpioPinDefault<'a, Bank : GPIO, Pin: Pins> = GpioPin<'a, Bank, Pin, Input, PinCnf1>;
+
 pub struct GpioPin<'a, G:'a, P, M, C>(pub &'a G, PhantomData<(P, M, C)>)
 where G: GPIO, P: Pins, M: PinMode, C: PinCnf;
 
