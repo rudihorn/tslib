@@ -304,7 +304,7 @@ impl<'a, G, P, C> GpioPin<'a, G, P, Input, C>
 where G: GPIO, C: PinCnf, P: Pins + PinsHigh + PinNr {
     #[inline(always)]
     pub fn set_analog_h(self) -> GpioPin<'a, G, P, Input, PinCnf0>{
-        self.set_cnt_0_h()
+        self.set_cnt_0()
     }
 
     #[inline(always)]
@@ -336,7 +336,7 @@ where G: GPIO, M: PinOutput + PinMode, C: PinCnf, P: Pins + PinsLow + PinNr {
     }
 
     #[inline(always)]
-    pub fn set_output_open_drain(self) -> GpioPin<'a, G, P, M, PinCnf0>{
+    pub fn set_output_push_pull(self) -> GpioPin<'a, G, P, M, PinCnf0>{
         self.set_cnf_0()
     }
 }
@@ -359,7 +359,7 @@ where G: GPIO, M: PinOutput + PinMode, C: PinCnf, P: Pins + PinsHigh + PinNr {
     }
 
     #[inline(always)]
-    pub fn set_output_open_drain_h(self) -> GpioPin<'a, G, P, M, PinCnf0>{
+    pub fn set_output_push_pull_h(self) -> GpioPin<'a, G, P, M, PinCnf0>{
         self.set_cnf_0_h()
     }
 }
