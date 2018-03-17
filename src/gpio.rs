@@ -298,6 +298,19 @@ where G: GPIO, C: PinCnf, P: Pins + PinsLow + PinNr {
     pub fn set_pull_up_down(self) -> GpioPin<'a, G, P, Input, PinCnf2> {
         self.set_cnf_2()
     }
+
+    #[inline(always)]
+    pub fn set_pull_down(self) -> GpioPin<'a, G, P, Input, PinCnf2> {
+        unsafe {
+            self.0.odr.write(|w| w.bits(1 << P::nr()));
+            transmute(self)
+        }
+    }
+
+    #[inline(always)]
+    pub fn read(&self) -> bool {
+        (self.0.idr.read().bits() & (1 << P::nr())) != 0
+    }
 }
 
 impl<'a, G, P, C> GpioPin<'a, G, P, Input, C>
