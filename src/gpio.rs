@@ -6,9 +6,8 @@ use core::mem::transmute;
 use core::marker::PhantomData;
 use core::ops::Deref;
 
+use rcc::{RccIOPeripheral, PeripheralEnabled};
 use stm32f103xx::{gpioa, GPIOA, GPIOB, GPIOC, GPIOD};
-
-
 
 
 
@@ -330,23 +329,23 @@ where G: GPIO;
 
 impl<'a, G> Gpio<'a, G> where G: GPIO {
     #[inline(always)]
-    pub fn get_pins(self) -> (
-        GpioPin<'a, G, Pin0, Input, PinCnf1>, 
-        GpioPin<'a, G, Pin1, Input, PinCnf1>, 
-        GpioPin<'a, G, Pin2, Input, PinCnf1>, 
-        GpioPin<'a, G, Pin3, Input, PinCnf1>, 
-        GpioPin<'a, G, Pin4, Input, PinCnf1>, 
-        GpioPin<'a, G, Pin5, Input, PinCnf1>, /* ... */
-        GpioPin<'a, G, Pin6, Input, PinCnf1>, 
-        GpioPin<'a, G, Pin7, Input, PinCnf1>, 
-        GpioPin<'a, G, Pin8, Input, PinCnf1>, 
-        GpioPin<'a, G, Pin9, Input, PinCnf1>, 
-        GpioPin<'a, G, Pin10, Input, PinCnf1>, 
-        GpioPin<'a, G, Pin11, Input, PinCnf1>, 
-        GpioPin<'a, G, Pin12, Input, PinCnf1>, 
-        GpioPin<'a, G, Pin13, Input, PinCnf1>, 
-        GpioPin<'a, G, Pin14, Input, PinCnf1>, 
-        GpioPin<'a, G, Pin15, Input, PinCnf1> 
+    pub fn get_pins(self, _rcc: RccIOPeripheral<'a, G, PeripheralEnabled>) -> (
+        GpioPinDefault<'a, G, Pin0>, 
+        GpioPinDefault<'a, G, Pin1>, 
+        GpioPinDefault<'a, G, Pin2>, 
+        GpioPinDefault<'a, G, Pin3>, 
+        GpioPinDefault<'a, G, Pin4>, 
+        GpioPinDefault<'a, G, Pin5>, 
+        GpioPinDefault<'a, G, Pin6>, 
+        GpioPinDefault<'a, G, Pin7>, 
+        GpioPinDefault<'a, G, Pin8>, 
+        GpioPinDefault<'a, G, Pin9>, 
+        GpioPinDefault<'a, G, Pin10>, 
+        GpioPinDefault<'a, G, Pin11>, 
+        GpioPinDefault<'a, G, Pin12>, 
+        GpioPinDefault<'a, G, Pin13>, 
+        GpioPinDefault<'a, G, Pin14>, 
+        GpioPinDefault<'a, G, Pin15> 
     ) {
         (
             GpioPin(self.0, PhantomData),

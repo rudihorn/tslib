@@ -4,7 +4,6 @@
 #[macro_use]
 pub mod common;
 
-#[macro_use(iprintln)]
 pub extern crate cortex_m;
 pub extern crate stm32f103xx_hal;
 

@@ -134,6 +134,32 @@ impl<'a> SpiBusPorts<'a, SPI1, NotConfigured> {
         } */
 }
 
+type_states!(SpiStates, (Read, Write, Error));
+pub struct SpiState<'a, S : Any + SPI, ST : SpiStates>(pub &'a S, PhantomData<ST>);
+
+pub enum SpiStateOptions<'a, S: Any + SPI> {
+    CanRead(SpiState<'a, S, Read>),
+    CanWrite(SpiState<'a, S, Write>),
+    Error(SpiState<'a, S, Error>, SPIError),
+    None 
+}
+
+impl<'a, S : Any + SPI> SpiState<'a, S, Read> {
+    #[inline(always)]
+    pub fn read(self) -> u8 {
+        unsafe { ptr::read_volatile(
+            &self.0.dr as *const _ as *const u8) }
+    }
+}
+
+impl<'a, S : Any + SPI> SpiState<'a, S, Write> {
+    #[inline(always)]
+    pub fn write(self, byte: u8) {
+        unsafe { ptr::write_volatile(
+            &self.0.dr as *const _ as *mut u8, byte) }
+    }
+}
+
 pub struct Spi<'a, S>(pub &'a S)
 where S: Any + SPI;
 
@@ -179,10 +205,15 @@ where S: Any + SPI,
         });
     }
 
-    pub fn listen(&self) {
+    pub fn listen(&self, tx : bool, rx : bool) {
         let spi = self.0;
 
-        spi.cr2.modify(|_,w| { w.txeie().set_bit().rxneie().set_bit().errie().set_bit() });
+        spi.cr2.modify(|_,w| { 
+            let w = w.txeie();
+            let w = if tx { w.set_bit() } else { w.clear_bit() };
+            let w = w.rxneie();
+            let w = if rx { w.set_bit() } else { w.clear_bit() }; 
+            w.errie().set_bit() });
     }
 
     /// Disables the SPI bus
@@ -199,6 +230,25 @@ where S: Any + SPI,
         self.0.cr1.modify(|_, w| w.spe().set_bit())
     }
     
+    pub fn get_state(&self) -> SpiStateOptions<'a, S> {
+        let spi1 = self.0;
+        let sr = spi1.sr.read();
+
+        if sr.ovr().bit_is_set() {
+            SpiStateOptions::Error(SpiState(spi1, PhantomData), SPIError::OVR)
+        } else if sr.modf().bit_is_set() {
+            SpiStateOptions::Error(SpiState(spi1, PhantomData), SPIError::MODF)
+        } else if sr.crcerr().bit_is_set() {
+            SpiStateOptions::Error(SpiState(spi1, PhantomData), SPIError::CRCERR)
+        } else if sr.rxne().bit_is_set() {
+            SpiStateOptions::CanRead(SpiState(spi1, PhantomData))
+        } else if sr.txe().bit_is_set() {
+            SpiStateOptions::CanWrite(SpiState(spi1, PhantomData))
+        } else {
+            SpiStateOptions::None
+        }
+    }
+
     pub fn read(&self) -> SPIResult<u8> {
         let spi1 = self.0;
         let sr = spi1.sr.read();
