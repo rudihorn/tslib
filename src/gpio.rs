@@ -366,7 +366,7 @@ where G: GPIO, M: PinOutput + PinMode, C: PinCnf, P: Pins + PinsHigh + PinNr {
 
 impl<'a, G, P, M, C> GpioPin<'a, G, P, M, C> 
 where G:GPIO, M:PinOutput + PinMode, P:Pins + PinNr, C:PinCnf {
-    pub fn set(&muf self, high:bool) {
+    pub fn set(&mut self, high:bool) {
         unsafe {
             self.0.bsrr.write(|w| w.bits(1 << P::nr() + (if high { 0 } else { 16 })));
         }
