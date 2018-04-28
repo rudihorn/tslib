@@ -11,4 +11,7 @@ authors = ["Rudi Horn <dyn-git@rudi-horn.de>"]
 cortex-m = "0.4.3"
 
 [dependencies.stm32f103xx-hal]
-path = "../stm32f103xx-hal"
+git = "https://github.com/japaric/stm32f103xx-hal.git"
+
+[features]
+rt = ["stm32f103xx-hal/rt"]

@@ -304,59 +304,6 @@ where
         self.0.cr2.modify(|_, w| {w.itevten().set_bit().iterren().set_bit()})
     }
 
-    /// Initialize the I2C port.
-    /// 
-    /// Initializes the GPIO ports of required by the I2C module an then starts it up using Fast Mode (400 kHz).
-    /// 
-    /// * `remap` - Specifies if the I2C module should use the alternative ports (only available for I2C1)
-    pub fn init(&self, remap: bool, afio: &AFIO, gpio: &GPIOB, rcc: &RCC) {
-        let i2c = self.0;
-
-        // enable alternate function IO and IO port B
-        //rcc.apb2enr.modify(|_, w| {w.afioen().enabled().iopben().enabled()});
-
-        if i2c.get_type_id() == TypeId::of::<I2C1>() {
-            rcc.apb1enr.modify(|_, w| {w.i2c1en().enabled()});
-
-            if remap {
-                afio.mapr.modify(|_, w| {w.i2c1_remap().set_bit()});
-                gpio.crh.modify(|_, w| { w.mode8().output2()});
-                gpio.crh.modify(|_, w| { w.cnf8().alt_open()});
-                gpio.crh.modify(|_, w| { w.mode9().output2()});
-                gpio.crh.modify(|_, w| { w.cnf9().alt_open()});
-            } else {
-                afio.mapr.modify(|_, w| {w.i2c1_remap().clear_bit()});
-
-                // set RB6 (SCL) and RB7 (SDA) to alternative push pull and 
-                // output 2 MHz
-                gpio.crl.modify(|_, w| { w.mode6().output2()});
-                gpio.crl.modify(|_, w| { w.cnf6().alt_open()});
-                gpio.crl.modify(|_, w| { w.mode7().output2()});
-                gpio.crl.modify(|_, w| { w.cnf7().alt_open()});
-            }
-        }
-
-
-        // set the apb frequency to 8MHz
-        i2c.cr2.modify(|_, w| unsafe {w.freq().bits(8)});
-
-        // enable FM mode (400KHz) set duty cycle to 1:1
-        // ccr is calculated as T_PLCK1 = 125ns (because 8MHz frequency)
-        // so 2500ns / 2 / 125ns = 10
-        i2c.ccr.modify(|_, w| unsafe {w.f_s().set_bit().ccr().bits(10)});
-
-        // alternative using 16:9 frequency by setting the duty bit
-        //i2c.ccr.modify(|_, w| unsafe {w.f_s().set_bit().duty().set_bit().ccr().bits(1)});
-
-        // set TRISE rise time
-        // for SM mode it is 1000ns for FM mode it is 300ns
-        // assuming T_PLCK1 = 125ns, 300ns / 125 ns ~ 2.4, round up to 3 and then +1
-        i2c.trise.modify(|_, w| unsafe {w.trise().bits(4)});
-
-        // enable the peripheral
-        i2c.cr1.modify(|_, w| {w.pe().set_bit()});
-    }
-
     fn get_error(&self, sr1: i2c1::sr1::R) -> I2CError {
         if sr1.timeout().bit_is_set() {
             return I2CError::Timeout

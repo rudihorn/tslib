@@ -14,5 +14,5 @@ pub mod rcc;
 pub mod afio;
 pub mod gpio;
 pub mod spi;
-
+pub mod usart;
 
