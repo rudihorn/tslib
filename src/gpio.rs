@@ -53,13 +53,33 @@ pub struct GpioPin<'a, G:'a, P, M, C>(pub &'a G, PhantomData<(P, M, C)>)
 where G: GPIO, P: Pins, M: PinMode, C: PinCnf;
 
 impl<'a, G, P, M, C> GpioPin<'a, G, P, M, C>
-where G: GPIO, M: PinMode, C: PinCnf, P: Pins + PinsHigh + PinNr {
+where G: GPIO, M: PinMode, C: PinCnf, P: Pins + PinNr {
+    #[inline(always)]
+    fn set_mode_val(self, value : u8) {
+        const MASK: u8 = 0b11;
+        let higher = P::nr() >= 8;
+        let offset = (if higher then P::nr() - 8 else P::nr()) * 4;
+        unsafe {
+            let reg = if higher {
+                self.0.crh
+            } else {
+                self.0.crl
+            };
+            
+            reg.modify(|r,w| { 
+                 w.bits((r.bits() & !((MASK as u32) << offset)) | (((value & MASK) as u32) << offset) )
+            });
+
+            transmute(self)
+        }
+    }
+
     #[inline(always)]
     #[allow(non_snake_case)]
-    pub fn set_output_10MHz_h(self) -> GpioPin<'a, G, P, Output10, C> {
+    pub fn set_output_10MHz(self) -> GpioPin<'a, G, P, Output10, C> {
         const VALUE: u8 = 0b01;
         const MASK: u8 = 0b11;
-        let offset = (P::nr() - 8) * 4;
+        let offset = (if P::nr() > 0 then (P::nr() - 8) else P::nr()) * 4;
         unsafe {
             self.0.crh.modify(|r,w| { 
                 w.bits((r.bits() & !((MASK as u32) << offset)) | (((VALUE & MASK) as u32) << offset) )
