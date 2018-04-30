@@ -1,20 +1,18 @@
-#![feature(get_type_id)]
-#![feature(proc_macro)]
 #![no_std]
+#![feature(get_type_id)]
 
 #[macro_use]
 pub mod common;
 
-extern crate blue_pill;
-#[allow(unused_imports)]
-#[macro_use(iprint, iprintln)]
-extern crate cortex_m;
-extern crate cortex_m_rtfm as rtfm;
+pub extern crate cortex_m;
+pub extern crate stm32f103xx_hal;
+
+pub use stm32f103xx_hal::stm32f103xx;
 
 pub mod i2c;
 pub mod rcc;
 pub mod afio;
 pub mod gpio;
 pub mod spi;
-
+pub mod usart;
 

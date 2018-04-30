@@ -1,9 +1,8 @@
 
 #[allow(unused_imports)]
-#[macro_use]
 use common;
 
-use blue_pill::stm32f103xx::{AFIO, SPI1, SPI2};
+use stm32f103xx::{AFIO, SPI1, SPI2};
 
 use core::mem::transmute;
 use core::marker::PhantomData;
@@ -13,6 +12,42 @@ use spi::SPI;
 type_states!(IsEnabled, (NotEnabled, Enabled));
 type_states!(IsRemapped, (NotConfigured, NotRemapped, Remapped));
 type_group!(RemappedConfigurred, (NotRemapped, Remapped));
+
+pub struct AfioUSART1Peripheral<'a, R>(pub &'a AFIO, PhantomData<R>)
+where R: IsRemapped;
+
+impl <'a> AfioUSART1Peripheral<'a, NotConfigured> {
+    #[inline(always)]
+    pub fn set_not_remapped(self) -> AfioUSART1Peripheral<'a, NotRemapped> {
+        unsafe { transmute(self) }
+    }
+
+    #[inline(always)]
+    pub fn set_remapped(self) -> AfioUSART1Peripheral<'a, Remapped> {
+        unsafe {
+            self.0.mapr.modify(|_, w| { w.usart1_remap().set_bit() });
+            transmute(self)
+        }
+    }
+}
+
+pub struct AfioUSART2Peripheral<'a, R>(pub &'a AFIO, PhantomData<R>)
+where R: IsRemapped;
+
+impl <'a> AfioUSART2Peripheral<'a, NotConfigured> {
+    #[inline(always)]
+    pub fn set_not_remapped(self) -> AfioUSART1Peripheral<'a, NotRemapped> {
+        unsafe { transmute(self) }
+    }
+
+    #[inline(always)]
+    pub fn set_remapped(self) -> AfioUSART1Peripheral<'a, Remapped> {
+        unsafe {
+            self.0.mapr.modify(|_, w| { w.usart2_remap().set_bit() });
+            transmute(self)
+        }
+    }
+}
 
 pub struct AfioI2C1Peripheral<'a, R>(pub &'a AFIO, PhantomData<(R)>)
 where R: IsRemapped;

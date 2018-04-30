@@ -11,7 +11,6 @@
 //! - SDA = PB11
 
 #[allow(unused_imports)]
-#[macro_use]
 use common;
 
 use core::any::{Any, TypeId};
@@ -20,7 +19,7 @@ use core::ops::Deref;
 use core::marker::PhantomData;
 use core::mem::transmute;
 
-use blue_pill::stm32f103xx::{AFIO, GPIOB, I2C1, I2C2, i2c1, RCC};
+use stm32f103xx::{AFIO, GPIOB, I2C1, I2C2, i2c1, RCC};
 
 use ::gpio::*;
 use ::afio::*;
@@ -60,17 +59,6 @@ impl I2CWriteState {
 
 type I2CReadState = I2CState;
 
-/* impl<T> I2CReadState<T> {
-    pub fn cont<F,T2>(&self, f : F) -> I2CReadState<T2> 
-    where F : Fn(T) -> I2CReadState<T2> {
-        match self.0 {
-            I2CState::Ok => f(self.1.unwrap()),
-            I2CState::Busy => I2CReadState(I2CState::Busy, None),
-            I2CState::Error(err) => I2CReadState(I2CState::Error(err), None)
-        }
-    }
-} */
-
 impl I2CState {
     #[inline(always)]
     pub fn is_ok(&self) -> bool {
@@ -87,17 +75,6 @@ impl I2CState {
             _ => false
         }
     }
-
-    /* 
-    #[inline(always)]
-    pub fn cont<T>(&self, fun : T) -> I2CState
-        where T : Fn() -> I2CState {
-            if self.is_ok() {
-                fun()
-            } else {
-                *self
-            }
-        } */
 }
 
 impl Display for I2CState {
@@ -226,9 +203,9 @@ where S: Any + I2C, P: IsConfigured;
 impl<'a> I2cBusPorts<'a, I2C1, NotConfigured> {
     #[inline(always)]
     pub fn set_ports_normal<M>(self, 
-        pb6 : GpioPin<'a, GPIOB, Pin6, M, PinCnf3>, 
-        pb7 : GpioPin<'a, GPIOB, Pin7, M, PinCnf3>,
-        afio_i2c : AfioI2C1Peripheral<'a, NotRemapped>) 
+        _pb6 : GpioPin<'a, GPIOB, Pin6, M, PinCnf3>, 
+        _pb7 : GpioPin<'a, GPIOB, Pin7, M, PinCnf3>,
+        _afio_i2c : AfioI2C1Peripheral<'a, NotRemapped>) 
         -> I2cBusPorts<'a, I2C1, Configured> where M : PinOutput + PinMode {
             unsafe {
                 transmute(self)
@@ -237,34 +214,15 @@ impl<'a> I2cBusPorts<'a, I2C1, NotConfigured> {
 
     #[inline(always)]
     pub fn set_ports_remapped<M>(self, 
-        pb8 : GpioPin<'a, GPIOB, Pin8, M, PinCnf3>, 
-        pb9 : GpioPin<'a, GPIOB, Pin9, M, PinCnf3>,
-        afio_i2c : AfioI2C1Peripheral<'a, Remapped>) 
+        _pb8 : GpioPin<'a, GPIOB, Pin8, M, PinCnf3>, 
+        _pb9 : GpioPin<'a, GPIOB, Pin9, M, PinCnf3>,
+        _afio_i2c : AfioI2C1Peripheral<'a, Remapped>) 
         -> I2cBusPorts<'a, I2C1, Configured> where M : PinOutput + PinMode {
             unsafe {
                 transmute(self)
             }
         }
 }
-
-
-/* type_states!(PortMode, (NotSelected, NormalPorts, AlternativePorts));
-
-pub struct I2cPortMode<'a, S, PortMode>(pub &'a S, PhantomData<PortMode>)
-where S: Any + I2C;
-
-impl<'a, S> I2cPortMode<'a, S, NotSelected> where S: Any + I2C {
-    pub fn set_normal_ports(self) -> I2cPortMode<'a, S, NormalPorts> {
-        unsafe { transmute(self) }
-    }
-
-    pub fn set_alt_ports(self) -> I2cPortMode<'a, S, AlternativePorts> {
-        unsafe {
-            self.0.afio.mapr.modify(|_, w| {w.i2c1_remap().set_bit()});
-            transmute(self) 
-        }
-    }
-} */
 
 type_states!(I2cStates, (Start, Read, Write));
 
@@ -313,33 +271,11 @@ impl<'a, S: Any + I2C> I2cState<'a, S, Write> {
     }
 }
 
-/* 
-impl<'a, S> I2c<'a, S, NotSelected> 
-where 
-    S: Any + I2C {
-    pub fn use_normal_ports(self) -> I2c<'a, S, NormalPorts> {
-        unsafe { transmute(self) }
-    }
-} */
-
-//impl_repl!(I2c, NormalPorts; ab, ad, bc; ; );
-
-
 
 impl<'a, S> I2c<'a, S>
 where
     S: Any + I2C
 {
-    /*
-    /// By default I2C1 uses PB6 (SCL) and PB7 (SDA).
-    /// This function allows us to remap it to PB8 (SCL) and PB9 (SDA).
-    /// I2C2 only uses PB10 (SCL) and PB11 (SDA)
-    fn use_remap(&self, afio: &AFIO) {
-        let i2c = self.0;
-
-        if i2c.get_type_id() == TypeId::of::<I2C1>() {
-        }
-    }*/
 
     pub fn start_init(&self) -> (
         I2cBusSpeedMode<'a, S, NotSelected>,
@@ -356,69 +292,16 @@ where
     }
 
     pub fn complete_init<M>(&self, 
-        bsm : I2cBusSpeedMode<'a, S, M>, 
-        freq : I2cFrequency<'a, S, Configured>,
-        trise : I2cTrise<'a, S, Configured>,
-        bp : I2cBusPorts<'a, S, Configured>
+        _bsm : I2cBusSpeedMode<'a, S, M>, 
+        _freq : I2cFrequency<'a, S, Configured>,
+        _trise : I2cTrise<'a, S, Configured>,
+        _bp : I2cBusPorts<'a, S, Configured>
     ) where M : BusSpeedMode + BusSpeedModeConfigured {
         self.0.cr1.modify(|_, w| {w.pe().set_bit()});
     }
 
     pub fn listen(&self) {
         self.0.cr2.modify(|_, w| {w.itevten().set_bit().iterren().set_bit()})
-    }
-
-    /// Initialize the I2C port.
-    /// 
-    /// Initializes the GPIO ports of required by the I2C module an then starts it up using Fast Mode (400 kHz).
-    /// 
-    /// * `remap` - Specifies if the I2C module should use the alternative ports (only available for I2C1)
-    pub fn init(&self, remap: bool, afio: &AFIO, gpio: &GPIOB, rcc: &RCC) {
-        let i2c = self.0;
-
-        // enable alternate function IO and IO port B
-        //rcc.apb2enr.modify(|_, w| {w.afioen().enabled().iopben().enabled()});
-
-        if i2c.get_type_id() == TypeId::of::<I2C1>() {
-            rcc.apb1enr.modify(|_, w| {w.i2c1en().enabled()});
-
-            if remap {
-                afio.mapr.modify(|_, w| {w.i2c1_remap().set_bit()});
-                gpio.crh.modify(|_, w| { w.mode8().output2()});
-                gpio.crh.modify(|_, w| { w.cnf8().alt_open()});
-                gpio.crh.modify(|_, w| { w.mode9().output2()});
-                gpio.crh.modify(|_, w| { w.cnf9().alt_open()});
-            } else {
-                afio.mapr.modify(|_, w| {w.i2c1_remap().clear_bit()});
-
-                // set RB6 (SCL) and RB7 (SDA) to alternative push pull and 
-                // output 2 MHz
-                gpio.crl.modify(|_, w| { w.mode6().output2()});
-                gpio.crl.modify(|_, w| { w.cnf6().alt_open()});
-                gpio.crl.modify(|_, w| { w.mode7().output2()});
-                gpio.crl.modify(|_, w| { w.cnf7().alt_open()});
-            }
-        }
-
-
-        // set the apb frequency to 8MHz
-        i2c.cr2.modify(|_, w| unsafe {w.freq().bits(8)});
-
-        // enable FM mode (400KHz) set duty cycle to 1:1
-        // ccr is calculated as T_PLCK1 = 125ns (because 8MHz frequency)
-        // so 2500ns / 2 / 125ns = 10
-        i2c.ccr.modify(|_, w| unsafe {w.f_s().set_bit().ccr().bits(10)});
-
-        // alternative using 16:9 frequency by setting the duty bit
-        //i2c.ccr.modify(|_, w| unsafe {w.f_s().set_bit().duty().set_bit().ccr().bits(1)});
-
-        // set TRISE rise time
-        // for SM mode it is 1000ns for FM mode it is 300ns
-        // assuming T_PLCK1 = 125ns, 300ns / 125 ns ~ 2.4, round up to 3 and then +1
-        i2c.trise.modify(|_, w| unsafe {w.trise().bits(4)});
-
-        // enable the peripheral
-        i2c.cr1.modify(|_, w| {w.pe().set_bit()});
     }
 
     fn get_error(&self, sr1: i2c1::sr1::R) -> I2CError {
@@ -516,7 +399,7 @@ where
 
     #[inline(always)]
     pub fn start_read(&self, addr : u8) {
-        let dat = (addr << 1);
+        let dat = (addr << 1) | 0;
         self.0.dr.write(|w| unsafe { w.bits(dat as u32) });
     }
 
@@ -577,12 +460,6 @@ where
         I2CState::Ok
     }
 
-/*
-    pub fn write_data_polling(&self, dat : u8) -> I2CState {
-        self.write_data(dat);
-        self.poll_loop(|| {self.is_byte_transfer_finished()});
-    } */
-
     #[inline(always)]
     pub fn is_busy(&self) -> bool {
         let i2c = self.0;
@@ -608,7 +485,7 @@ where
         if sr1.sb().bit_is_set() {
             I2cStateOptions::Started(I2cState(&self.0, PhantomData))
         } else if sr1.addr().bit_is_set() {
-            let b = self.0.sr2.read();
+            let _b = self.0.sr2.read();
             I2cStateOptions::CanWrite(I2cState(&self.0, PhantomData))
         } else if sr1.tx_e().bit_is_set() {
             I2cStateOptions::CanWrite(I2cState(&self.0, PhantomData))

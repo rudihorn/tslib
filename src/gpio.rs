@@ -1,15 +1,13 @@
 
 #[allow(unused_imports)]
-#[macro_use]
 use common;
 
 use core::mem::transmute;
 use core::marker::PhantomData;
 use core::ops::Deref;
 
-use blue_pill::stm32f103xx::{gpioa, GPIOA, GPIOB, GPIOC, GPIOD};
-
-
+use rcc::{RccIOPeripheral, PeripheralEnabled};
+use stm32f103xx::{gpioa, GPIOA, GPIOB, GPIOC, GPIOD};
 
 
 
@@ -48,6 +46,8 @@ type_group!(PinsHigh, (Pin8, Pin9, Pin10, Pin11, Pin12, Pin13, Pin14, Pin15));
 type_states!(PinMode, (Input, Output10, Output2, Output50));
 type_group!(PinOutput, (Output10, Output2, Output50));
 type_states!(PinCnf, (PinCnf0, PinCnf1, PinCnf2, PinCnf3));
+
+pub type GpioPinDefault<'a, Bank : GPIO, Pin: Pins> = GpioPin<'a, Bank, Pin, Input, PinCnf1>;
 
 pub struct GpioPin<'a, G:'a, P, M, C>(pub &'a G, PhantomData<(P, M, C)>)
 where G: GPIO, P: Pins, M: PinMode, C: PinCnf;
@@ -305,16 +305,36 @@ where G: GPIO, M: PinMode, C: PinCnf, P: Pins + PinsLow + PinNr {
 impl<'a, G, P, C> GpioPin<'a, G, P, Input, C>
 where G: GPIO, C: PinCnf, P: Pins + PinsLow + PinNr {
     #[inline(always)]
+    pub fn set_analog(self) -> GpioPin<'a, G, P, Input, PinCnf0>{
+        self.set_cnf_0()
+    }
+
+    #[inline(always)]
     pub fn set_floating_input(self) -> GpioPin<'a, G, P, Input, PinCnf1>{
         self.set_cnf_1()
+    }
+
+    #[inline(always)]
+    pub fn set_pull_up_down(self) -> GpioPin<'a, G, P, Input, PinCnf2> {
+        self.set_cnf_2()
     }
 }
 
 impl<'a, G, P, C> GpioPin<'a, G, P, Input, C>
 where G: GPIO, C: PinCnf, P: Pins + PinsHigh + PinNr {
     #[inline(always)]
+    pub fn set_analog_h(self) -> GpioPin<'a, G, P, Input, PinCnf0>{
+        self.set_cnf_0_h()
+    }
+
+    #[inline(always)]
     pub fn set_floating_input_h(self) -> GpioPin<'a, G, P, Input, PinCnf1>{
         self.set_cnf_1_h()
+    }
+
+    #[inline(always)]
+    pub fn set_pull_up_down_h(self) -> GpioPin<'a, G, P, Input, PinCnf2> {
+        self.set_cnf_2_h()
     }
 }
 
@@ -329,6 +349,16 @@ where G: GPIO, M: PinOutput + PinMode, C: PinCnf, P: Pins + PinsLow + PinNr {
     pub fn set_alt_output_push_pull(self) -> GpioPin<'a, G, P, M, PinCnf2>{
         self.set_cnf_2()
     }
+
+    #[inline(always)]
+    pub fn set_output_open_drain(self) -> GpioPin<'a, G, P, M, PinCnf1>{
+        self.set_cnf_1()
+    }
+
+    #[inline(always)]
+    pub fn set_output_push_pull(self) -> GpioPin<'a, G, P, M, PinCnf0>{
+        self.set_cnf_0()
+    }
 }
 
 impl<'a, G, P, M, C> GpioPin<'a, G, P, M, C>
@@ -342,6 +372,25 @@ where G: GPIO, M: PinOutput + PinMode, C: PinCnf, P: Pins + PinsHigh + PinNr {
     pub fn set_alt_output_push_pull_h(self) -> GpioPin<'a, G, P, M, PinCnf2>{
         self.set_cnf_2_h()
     }
+
+    #[inline(always)]
+    pub fn set_output_open_drain_h(self) -> GpioPin<'a, G, P, M, PinCnf1>{
+        self.set_cnf_1_h()
+    }
+
+    #[inline(always)]
+    pub fn set_output_push_pull_h(self) -> GpioPin<'a, G, P, M, PinCnf0>{
+        self.set_cnf_0_h()
+    }
+}
+
+impl<'a, G, P, M, C> GpioPin<'a, G, P, M, C> 
+where G:GPIO, M:PinOutput + PinMode, P:Pins + PinNr, C:PinCnf {
+    pub fn set(&mut self, high:bool) {
+        unsafe {
+            self.0.bsrr.write(|w| w.bits(1 << P::nr() + (if high { 0 } else { 16 })));
+        }
+    }
 }
 
 pub struct Gpio<'a, G:'a>(pub &'a G) 
@@ -349,23 +398,23 @@ where G: GPIO;
 
 impl<'a, G> Gpio<'a, G> where G: GPIO {
     #[inline(always)]
-    pub fn get_pins(self) -> (
-        GpioPin<'a, G, Pin0, Input, PinCnf1>, 
-        GpioPin<'a, G, Pin1, Input, PinCnf1>, 
-        GpioPin<'a, G, Pin2, Input, PinCnf1>, 
-        GpioPin<'a, G, Pin3, Input, PinCnf1>, 
-        GpioPin<'a, G, Pin4, Input, PinCnf1>, 
-        GpioPin<'a, G, Pin5, Input, PinCnf1>, /* ... */
-        GpioPin<'a, G, Pin6, Input, PinCnf1>, 
-        GpioPin<'a, G, Pin7, Input, PinCnf1>, 
-        GpioPin<'a, G, Pin8, Input, PinCnf1>, 
-        GpioPin<'a, G, Pin9, Input, PinCnf1>, 
-        GpioPin<'a, G, Pin10, Input, PinCnf1>, 
-        GpioPin<'a, G, Pin11, Input, PinCnf1>, 
-        GpioPin<'a, G, Pin12, Input, PinCnf1>, 
-        GpioPin<'a, G, Pin13, Input, PinCnf1>, 
-        GpioPin<'a, G, Pin14, Input, PinCnf1>, 
-        GpioPin<'a, G, Pin15, Input, PinCnf1> 
+    pub fn get_pins(self, _rcc: RccIOPeripheral<'a, G, PeripheralEnabled>) -> (
+        GpioPinDefault<'a, G, Pin0>, 
+        GpioPinDefault<'a, G, Pin1>, 
+        GpioPinDefault<'a, G, Pin2>, 
+        GpioPinDefault<'a, G, Pin3>, 
+        GpioPinDefault<'a, G, Pin4>, 
+        GpioPinDefault<'a, G, Pin5>, 
+        GpioPinDefault<'a, G, Pin6>, 
+        GpioPinDefault<'a, G, Pin7>, 
+        GpioPinDefault<'a, G, Pin8>, 
+        GpioPinDefault<'a, G, Pin9>, 
+        GpioPinDefault<'a, G, Pin10>, 
+        GpioPinDefault<'a, G, Pin11>, 
+        GpioPinDefault<'a, G, Pin12>, 
+        GpioPinDefault<'a, G, Pin13>, 
+        GpioPinDefault<'a, G, Pin14>, 
+        GpioPinDefault<'a, G, Pin15> 
     ) {
         (
             GpioPin(self.0, PhantomData),
