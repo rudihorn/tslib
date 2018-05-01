@@ -10,7 +10,7 @@ use core::marker::PhantomData;
 use core::mem::transmute;
 
 use gpio::{Input, PinOutput, GpioPin, Pin6, Pin7, Pin9, Pin10, PinMode, PinCnf1, PinCnf3};
-use afio::{AfioUSART1Peripheral, NotRemapped};
+use afio::{AfioUSART1Peripheral, Remapped, NotRemapped};
 use stm32f103xx::{GPIOA, GPIOB, USART1, USART2, usart1};
 
 type_states!(IsConfigured, (NotConfigured, Configured));
@@ -61,7 +61,7 @@ impl<U> Usart<U> where U : Any+USART {
 
         // setup BAUD rate of 115200
         // 8 MHz / 115.2 kHz = 69.444
-        self.0.brr.write(|w| { w.bits(69) });
+        unsafe { self.0.brr.write(|w| { w.bits(69) }); }
 
         // uart enable, receiver enable, transmitter enable
         self.0.cr1.write(|w| w.ue().set_bit()
@@ -74,7 +74,6 @@ impl<U> Usart<U> where U : Any+USART {
 
     pub fn get_write_state(&mut self) {
         let state = self.0.sr.read();
-        state.txe()
     }
 }
 

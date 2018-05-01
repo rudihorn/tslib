@@ -55,255 +55,92 @@ where G: GPIO, P: Pins, M: PinMode, C: PinCnf;
 impl<'a, G, P, M, C> GpioPin<'a, G, P, M, C>
 where G: GPIO, M: PinMode, C: PinCnf, P: Pins + PinNr {
     #[inline(always)]
-    fn set_mode_val(self, value : u8) {
+    fn set_mode_val(&self, value : u8) {
         const MASK: u8 = 0b11;
         let higher = P::nr() >= 8;
-        let offset = (if higher then P::nr() - 8 else P::nr()) * 4;
+        let offset = if higher { P::nr() - 8 } else { P::nr() } * 4;
         unsafe {
             let reg = if higher {
-                self.0.crh
+                self.0.crh.modify(|r,w| { w.bits((r.bits() & !((MASK as u32) << offset)) | (((value & MASK) as u32) << offset)) })
             } else {
-                self.0.crl
+                self.0.crl.modify(|r,w| { w.bits((r.bits() & !((MASK as u32) << offset)) | (((value & MASK) as u32) << offset)) })
             };
-            
-            reg.modify(|r,w| { 
-                 w.bits((r.bits() & !((MASK as u32) << offset)) | (((value & MASK) as u32) << offset) )
-            });
+        }
+    }
 
-            transmute(self)
+    #[inline(always)]
+    fn set_cnf_val(&self, value : u8) {
+        const MASK: u8 = 0b11;
+        let higher = P::nr() >= 8;
+        let offset = 2 + if higher { P::nr() - 8 } else { P::nr() } * 4;
+        unsafe {
+            let reg = if higher {
+                self.0.crh.modify(|r,w| { w.bits((r.bits() & !((MASK as u32) << offset)) | (((value & MASK) as u32) << offset)) })
+            } else {
+                self.0.crl.modify(|r,w| { w.bits((r.bits() & !((MASK as u32) << offset)) | (((value & MASK) as u32) << offset)) })
+            };
         }
     }
 
     #[inline(always)]
     #[allow(non_snake_case)]
     pub fn set_output_10MHz(self) -> GpioPin<'a, G, P, Output10, C> {
-        const VALUE: u8 = 0b01;
-        const MASK: u8 = 0b11;
-        let offset = (if P::nr() > 0 then (P::nr() - 8) else P::nr()) * 4;
-        unsafe {
-            self.0.crh.modify(|r,w| { 
-                w.bits((r.bits() & !((MASK as u32) << offset)) | (((VALUE & MASK) as u32) << offset) )
-            });
-            transmute(self)
-        }
-    }
-
-    #[inline(always)]
-    #[allow(non_snake_case)]
-    pub fn set_output_2MHz_h(self) -> GpioPin<'a, G, P, Output2, C> {
-        const VALUE: u8 = 0b10;
-        const MASK: u8 = 0b11;
-        let offset = (P::nr() - 8) * 4;
-        unsafe {
-            self.0.crh.modify(|r,w| { 
-                w.bits((r.bits() & !((MASK as u32) << offset)) | (((VALUE & MASK) as u32) << offset) )
-            }); 
-            transmute(self)
-        }
-    }
-
-    #[inline(always)]
-    #[allow(non_snake_case)]
-    pub fn set_output_50MHz_h(self) -> GpioPin<'a, G, P, Output50, C> {
-        const VALUE: u8 = 0b11;
-        const MASK: u8 = 0b11;
-        let offset = (P::nr() - 8) * 4;
-        unsafe {
-            self.0.crh.modify(|r,w| { 
-                w.bits((r.bits() & !((MASK as u32) << offset)) | (((VALUE & MASK) as u32) << offset) )
-            }); 
-            transmute(self)
-        }
-    }
-
-    #[inline(always)]
-    #[allow(non_snake_case)]
-    pub fn set_input_h(self) -> GpioPin<'a, G, P, Input, C> {
-        const VALUE: u8 = 0b00;
-        const MASK: u8 = 0b11;
-        let offset = (P::nr() - 8) * 4;
-        unsafe {
-            self.0.crh.modify(|r,w| { 
-                w.bits((r.bits() & !((MASK as u32) << offset)) | (((VALUE & MASK) as u32) << offset) )
-            }); 
-            transmute(self)
-        }
-    }
-
-    #[inline(always)]
-    #[allow(non_snake_case)]
-    pub fn set_cnf_0_h(self) -> GpioPin<'a, G, P, M, PinCnf0> {
-        const VALUE: u8 = 0b00;
-        const MASK: u8 = 0b11;
-        let offset = 2 + (P::nr() - 8) * 4;
-        unsafe {
-            self.0.crh.modify(|r,w| { 
-                w.bits((r.bits() & !((MASK as u32) << offset)) | (((VALUE & MASK) as u32) << offset) )
-            }); 
-            transmute(self)
-        }
-    }
-
-    #[inline(always)]
-    #[allow(non_snake_case)]
-    pub fn set_cnf_1_h(self) -> GpioPin<'a, G, P, M, PinCnf1> {
-        const VALUE: u8 = 0b01;
-        const MASK: u8 = 0b11;
-        let offset = 2 + (P::nr() - 8) * 4;
-        unsafe {
-            self.0.crh.modify(|r,w| { 
-                w.bits((r.bits() & !((MASK as u32) << offset)) | (((VALUE & MASK) as u32) << offset) )
-            }); 
-            transmute(self)
-        }
-    }
-
-    #[inline(always)]
-    #[allow(non_snake_case)]
-    pub fn set_cnf_2_h(self) -> GpioPin<'a, G, P, M, PinCnf2> {
-        const VALUE: u8 = 0b10;
-        const MASK: u8 = 0b11;
-        let offset = 2 + (P::nr() - 8) * 4;
-        unsafe {
-            self.0.crh.modify(|r,w| { 
-                w.bits((r.bits() & !((MASK as u32) << offset)) | (((VALUE & MASK) as u32) << offset) )
-            }); 
-            transmute(self)
-        }
-    }
-
-    #[inline(always)]
-    #[allow(non_snake_case)]
-    pub fn set_cnf_3_h(self) -> GpioPin<'a, G, P, M, PinCnf3> {
-        const VALUE: u8 = 0b11;
-        const MASK: u8 = 0b11;
-        let offset = 2 + (P::nr() - 8) * 4;
-        unsafe {
-            self.0.crh.modify(|r,w| { 
-                w.bits((r.bits() & !((MASK as u32) << offset)) | (((VALUE & MASK) as u32) << offset) )
-            }); 
-            transmute(self)
-        }
-    }
-}
-
-impl<'a, G, P, M, C> GpioPin<'a, G, P, M, C>
-where G: GPIO, M: PinMode, C: PinCnf, P: Pins + PinsLow + PinNr {
-    #[inline(always)]
-    #[allow(non_snake_case)]
-    pub fn set_output_10MHz(self) -> GpioPin<'a, G, P, Output10, C> {
-        const VALUE: u8 = 0b01;
-        const MASK: u8 = 0b11;
-        let offset = P::nr() * 4;
-        unsafe {
-            self.0.crl.modify(|r,w| { 
-                w.bits((r.bits() & !((MASK as u32) << offset)) | (((VALUE & MASK) as u32) << offset) )
-            });
-            transmute(self)
-        }
+        self.set_mode_val(0b01);
+        unsafe { transmute(self) }
     }
 
     #[inline(always)]
     #[allow(non_snake_case)]
     pub fn set_output_2MHz(self) -> GpioPin<'a, G, P, Output2, C> {
-        const VALUE: u8 = 0b10;
-        const MASK: u8 = 0b11;
-        let offset = P::nr() * 4;
-        unsafe {
-            self.0.crl.modify(|r,w| { 
-                w.bits((r.bits() & !((MASK as u32) << offset)) | (((VALUE & MASK) as u32) << offset) )
-            }); 
-            transmute(self)
-        }
+        self.set_mode_val(0b10);
+        unsafe { transmute(self) }
     }
 
     #[inline(always)]
     #[allow(non_snake_case)]
     pub fn set_output_50MHz(self) -> GpioPin<'a, G, P, Output50, C> {
-        const VALUE: u8 = 0b11;
-        const MASK: u8 = 0b11;
-        let offset = P::nr() * 4;
-        unsafe {
-            self.0.crl.modify(|r,w| { 
-                w.bits((r.bits() & !((MASK as u32) << offset)) | (((VALUE & MASK) as u32) << offset) )
-            }); 
-            transmute(self)
-        }
+        self.set_mode_val(0b11);
+        unsafe { transmute(self) }
     }
 
     #[inline(always)]
     #[allow(non_snake_case)]
     pub fn set_input(self) -> GpioPin<'a, G, P, Input, C> {
-        const VALUE: u8 = 0b00;
-        const MASK: u8 = 0b11;
-        let offset = P::nr() * 4;
-        unsafe {
-            self.0.crl.modify(|r,w| { 
-                w.bits((r.bits() & !((MASK as u32) << offset)) | (((VALUE & MASK) as u32) << offset) )
-            }); 
-            transmute(self)
-        }
+        self.set_mode_val(0b00);
+        unsafe { transmute(self) }
     }
 
     #[inline(always)]
     #[allow(non_snake_case)]
     pub fn set_cnf_0(self) -> GpioPin<'a, G, P, M, PinCnf0> {
-        const VALUE: u8 = 0b00;
-        const MASK: u8 = 0b11;
-        let offset = 2 + P::nr() * 4;
-        unsafe {
-            self.0.crl.modify(|r,w| { 
-                w.bits((r.bits() & !((MASK as u32) << offset)) | (((VALUE & MASK) as u32) << offset) )
-            }); 
-            transmute(self)
-        }
+        self.set_cnf_val(0b00);
+        unsafe { transmute(self) }
     }
 
     #[inline(always)]
     #[allow(non_snake_case)]
     pub fn set_cnf_1(self) -> GpioPin<'a, G, P, M, PinCnf1> {
-        const VALUE: u8 = 0b01;
-        const MASK: u8 = 0b11;
-        let offset = 2 + P::nr() * 4;
-        unsafe {
-            self.0.crl.modify(|r,w| { 
-                w.bits((r.bits() & !((MASK as u32) << offset)) | (((VALUE & MASK) as u32) << offset) )
-            }); 
-            transmute(self)
-        }
+        self.set_cnf_val(0b01);
+        unsafe { transmute(self) }
     }
 
     #[inline(always)]
     #[allow(non_snake_case)]
     pub fn set_cnf_2(self) -> GpioPin<'a, G, P, M, PinCnf2> {
-        const VALUE: u8 = 0b10;
-        const MASK: u8 = 0b11;
-        let offset = 2 + P::nr() * 4;
-        unsafe {
-            self.0.crl.modify(|r,w| { 
-                w.bits((r.bits() & !((MASK as u32) << offset)) | (((VALUE & MASK) as u32) << offset) )
-            }); 
-            transmute(self)
-        }
+        self.set_cnf_val(0b10);
+        unsafe { transmute(self) }
     }
 
     #[inline(always)]
     #[allow(non_snake_case)]
     pub fn set_cnf_3(self) -> GpioPin<'a, G, P, M, PinCnf3> {
-        const VALUE: u8 = 0b11;
-        const MASK: u8 = 0b11;
-        let offset = 2 + P::nr() * 4;
-        unsafe {
-            self.0.crl.modify(|r,w| { 
-                w.bits((r.bits() & !((MASK as u32) << offset)) | (((VALUE & MASK) as u32) << offset) )
-            }); 
-            transmute(self)
-        }
+        self.set_cnf_val(0b11);
+        unsafe { transmute(self) }
     }
 }
 
 impl<'a, G, P, C> GpioPin<'a, G, P, Input, C>
-where G: GPIO, C: PinCnf, P: Pins + PinsLow + PinNr {
+where G: GPIO, C: PinCnf, P: Pins + PinNr {
     #[inline(always)]
     pub fn set_analog(self) -> GpioPin<'a, G, P, Input, PinCnf0>{
         self.set_cnf_0()
@@ -320,26 +157,8 @@ where G: GPIO, C: PinCnf, P: Pins + PinsLow + PinNr {
     }
 }
 
-impl<'a, G, P, C> GpioPin<'a, G, P, Input, C>
-where G: GPIO, C: PinCnf, P: Pins + PinsHigh + PinNr {
-    #[inline(always)]
-    pub fn set_analog_h(self) -> GpioPin<'a, G, P, Input, PinCnf0>{
-        self.set_cnf_0_h()
-    }
-
-    #[inline(always)]
-    pub fn set_floating_input_h(self) -> GpioPin<'a, G, P, Input, PinCnf1>{
-        self.set_cnf_1_h()
-    }
-
-    #[inline(always)]
-    pub fn set_pull_up_down_h(self) -> GpioPin<'a, G, P, Input, PinCnf2> {
-        self.set_cnf_2_h()
-    }
-}
-
 impl<'a, G, P, M, C> GpioPin<'a, G, P, M, C>
-where G: GPIO, M: PinOutput + PinMode, C: PinCnf, P: Pins + PinsLow + PinNr {
+where G: GPIO, M: PinOutput + PinMode, C: PinCnf, P: Pins + PinNr {
     #[inline(always)]
     pub fn set_alt_output_open_drain(self) -> GpioPin<'a, G, P, M, PinCnf3>{
         self.set_cnf_3()
@@ -358,29 +177,6 @@ where G: GPIO, M: PinOutput + PinMode, C: PinCnf, P: Pins + PinsLow + PinNr {
     #[inline(always)]
     pub fn set_output_push_pull(self) -> GpioPin<'a, G, P, M, PinCnf0>{
         self.set_cnf_0()
-    }
-}
-
-impl<'a, G, P, M, C> GpioPin<'a, G, P, M, C>
-where G: GPIO, M: PinOutput + PinMode, C: PinCnf, P: Pins + PinsHigh + PinNr {
-    #[inline(always)]
-    pub fn set_alt_output_open_drain_h(self) -> GpioPin<'a, G, P, M, PinCnf3>{
-        self.set_cnf_3_h()
-    }
-
-    #[inline(always)]
-    pub fn set_alt_output_push_pull_h(self) -> GpioPin<'a, G, P, M, PinCnf2>{
-        self.set_cnf_2_h()
-    }
-
-    #[inline(always)]
-    pub fn set_output_open_drain_h(self) -> GpioPin<'a, G, P, M, PinCnf1>{
-        self.set_cnf_1_h()
-    }
-
-    #[inline(always)]
-    pub fn set_output_push_pull_h(self) -> GpioPin<'a, G, P, M, PinCnf0>{
-        self.set_cnf_0_h()
     }
 }
 
