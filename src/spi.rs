@@ -164,7 +164,7 @@ impl<'a, S, R> hal::spi::FullDuplex<u8> for Spi<'a, S, R>
 }
 
 impl<'a> Spi<'a, SPI1, NotRemapped> {
-    pub fn remapped_ports<M>(
+    pub fn normal_ports<M>(
         _pa4 : GpioPin<'a, GPIOA, Pin4, M, PinCnf2>, 
         _pa5 : GpioPin<'a, GPIOA, Pin5, M, PinCnf2>,
         _pa6 : GpioPin<'a, GPIOA, Pin6, Input, PinCnf1>,

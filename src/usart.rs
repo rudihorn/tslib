@@ -3,11 +3,9 @@
 use common;
 
 use core::any::Any;
-use core::fmt::{Display, Formatter, Result};
 use core::ops::Deref;
 use core::ptr;
 use core::marker::PhantomData;
-use core::mem::transmute;
 
 use hal;
 use nb;

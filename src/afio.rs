@@ -6,9 +6,7 @@ use stm32f103xx::{AFIO};
 
 use core::marker::PhantomData;
 
-type_states!(IsEnabled, (NotEnabled, Enabled));
 type_states!(IsRemapped, (NotConfigured, NotRemapped, Remapped));
-type_group!(RemappedConfigurred, (NotRemapped, Remapped));
 
 macro_rules! peripheral_macro  {
     ($name:ident, $remap_bit:ident) => {
