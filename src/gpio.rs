@@ -52,6 +52,39 @@ pub type GpioPinDefault<'a, Bank : GPIO, Pin: Pins> = GpioPin<'a, Bank, Pin, Inp
 pub struct GpioPin<'a, G:'a, P, M, C>(pub &'a G, PhantomData<(P, M, C)>)
 where G: GPIO, P: Pins, M: PinMode, C: PinCnf;
 
+trait GpioPinInternal {
+    fn set_mode_val_new(&self, value : u8);
+}
+
+macro_rules! per_pin {
+    ($pin : ident, $reg : ident, $modeop : ident) => {
+        impl<'a, G, M, C> GpioPin<'a, G, $pin, M, C,>
+        where G: GPIO, M: PinMode, C: PinCnf {
+            fn set_mode_val_new(&self, value : u8) {
+                (self.0).$reg.modify(|_,w| w.$modeop().bits(value));
+            }
+        }
+    };
+}
+
+per_pin!(Pin0, crl, mode0);
+per_pin!(Pin1, crl, mode1);
+per_pin!(Pin2, crl, mode2);
+per_pin!(Pin3, crl, mode3);
+per_pin!(Pin4, crl, mode4);
+per_pin!(Pin5, crl, mode5);
+per_pin!(Pin6, crl, mode6);
+per_pin!(Pin7, crl, mode7);
+per_pin!(Pin8,  crh, mode8);
+per_pin!(Pin9,  crh, mode9);
+per_pin!(Pin10, crh, mode10);
+per_pin!(Pin11, crh, mode11);
+per_pin!(Pin12, crh, mode12);
+per_pin!(Pin13, crh, mode13);
+per_pin!(Pin14, crh, mode14);
+per_pin!(Pin15, crh, mode15);
+
+
 impl<'a, G, P, M, C> GpioPin<'a, G, P, M, C>
 where G: GPIO, M: PinMode, C: PinCnf, P: Pins + PinNr {
     #[inline(always)]
@@ -86,7 +119,7 @@ where G: GPIO, M: PinMode, C: PinCnf, P: Pins + PinNr {
     #[allow(non_snake_case)]
     pub fn set_output_10MHz(self) -> GpioPin<'a, G, P, Output10, C> {
         self.set_mode_val(0b01);
-        unsafe { transmute(self) }
+        GpioPin(self.0, PhantomData)
     }
 
     #[inline(always)]

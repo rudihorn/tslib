@@ -2,120 +2,65 @@
 #[allow(unused_imports)]
 use common;
 
-use stm32f103xx::{AFIO, SPI1, SPI2};
+use stm32f103xx::{AFIO};
 
-use core::mem::transmute;
 use core::marker::PhantomData;
-
-use spi::SPI;
 
 type_states!(IsEnabled, (NotEnabled, Enabled));
 type_states!(IsRemapped, (NotConfigured, NotRemapped, Remapped));
 type_group!(RemappedConfigurred, (NotRemapped, Remapped));
 
-pub struct AfioUSART1Peripheral<'a, R>(pub &'a AFIO, PhantomData<R>)
-where R: IsRemapped;
+macro_rules! peripheral_macro  {
+    ($name:ident, $remap_bit:ident) => {
+        pub struct $name<'a, R>(pub &'a AFIO, PhantomData<R>)
+        where R: IsRemapped;
 
-impl <'a> AfioUSART1Peripheral<'a, NotConfigured> {
-    #[inline(always)]
-    pub fn set_not_remapped(self) -> AfioUSART1Peripheral<'a, NotRemapped> {
-        unsafe { transmute(self) }
-    }
+        impl <'a> $name<'a, NotConfigured> {
+            #[inline(always)]
+            pub fn set_not_remapped(self) -> $name<'a, NotRemapped> {
+                $name(self.0, PhantomData)
+            }
 
-    #[inline(always)]
-    pub fn set_remapped(self) -> AfioUSART1Peripheral<'a, Remapped> {
-        unsafe {
-            self.0.mapr.modify(|_, w| { w.usart1_remap().set_bit() });
-            transmute(self)
+            #[inline(always)]
+            pub fn set_remapped(self) -> $name<'a, Remapped> {
+                self.0.mapr.modify(|_, w| { w.$remap_bit().set_bit() });
+                $name(self.0, PhantomData)
+            }
+        }
+    };
+}
+
+peripheral_macro!(AfioUSART1Peripheral, usart1_remap);
+peripheral_macro!(AfioUSART2Peripheral, usart2_remap);
+peripheral_macro!(AfioI2C1Peripheral, i2c1_remap);
+peripheral_macro!(AfioSPI1Peripheral, spi1_remap);
+
+macro_rules! peripherals {
+    ( $(($periph:ident, $name:ident)),* ) => {
+        pub struct AfioPeripherals<'a> {
+            $( 
+                pub $name : $periph<'a, NotConfigured>,
+            )*
+        }
+
+        pub struct Afio<'a>(pub &'a AFIO);
+
+        impl <'a> Afio<'a> {
+            #[inline(always)]
+            pub fn get_peripherals(self) -> AfioPeripherals<'a> {
+                AfioPeripherals {
+                    $(
+                        $name: $periph(self.0, PhantomData),
+                    )*
+                }
+            }
         }
     }
 }
 
-pub struct AfioUSART2Peripheral<'a, R>(pub &'a AFIO, PhantomData<R>)
-where R: IsRemapped;
-
-impl <'a> AfioUSART2Peripheral<'a, NotConfigured> {
-    #[inline(always)]
-    pub fn set_not_remapped(self) -> AfioUSART1Peripheral<'a, NotRemapped> {
-        unsafe { transmute(self) }
-    }
-
-    #[inline(always)]
-    pub fn set_remapped(self) -> AfioUSART1Peripheral<'a, Remapped> {
-        unsafe {
-            self.0.mapr.modify(|_, w| { w.usart2_remap().set_bit() });
-            transmute(self)
-        }
-    }
-}
-
-pub struct AfioI2C1Peripheral<'a, R>(pub &'a AFIO, PhantomData<(R)>)
-where R: IsRemapped;
-
-impl<'a> AfioI2C1Peripheral<'a, NotConfigured> {
-    #[inline(always)]
-    pub fn set_not_remapped(self) -> AfioI2C1Peripheral<'a, NotRemapped> {
-        unsafe { transmute(self) }
-    }
-
-    #[inline(always)]
-    pub fn set_remapped(self) -> AfioI2C1Peripheral<'a, Remapped> {
-        unsafe {
-            self.0.mapr.modify(|_, w| { w.i2c1_remap().set_bit() });
-            transmute(self) 
-        }
-    }
-}
-
-pub struct AfioSPIPeripheral<'a, S : SPI, R : IsRemapped>(pub &'a AFIO, PhantomData<(S, R)>);
-
-impl<'a> AfioSPIPeripheral<'a, SPI1, NotConfigured> {
-    #[inline(always)]
-    pub fn set_not_remapped_spi1(self) -> AfioSPIPeripheral<'a, SPI1, NotRemapped> {
-        unsafe {
-            transmute(self)
-        }
-    }
-
-    #[inline(always)]
-    pub fn set_remapped_spi1(self) -> AfioSPIPeripheral<'a, SPI1, Remapped> {
-        unsafe {
-            self.0.mapr.modify(|_, w| {w.spi1_remap().set_bit()});
-            transmute(self)
-        }
-    }
-}
-
-impl<'a> AfioSPIPeripheral<'a, SPI2, NotConfigured> {
-    #[inline(always)]
-    pub fn set_not_remapped_spi2(self) -> AfioSPIPeripheral<'a, SPI2, NotRemapped> {
-        unsafe {
-            transmute(self)
-        }
-    }
-
-    /* #[inline(always)]
-    pub fn set_remapped_spi2(self) -> AfioSPIPeripheral<'a, SPI2, Remapped> {
-        unsafe {
-            self.0.mapr.modify(|_, w| {w.spi2_remap().set_bit()});
-            transmute(self)
-        }
-    } */
-}
-
-pub struct AfioPeripherals<'a> {
-    pub i2c1 : AfioI2C1Peripheral<'a, NotConfigured>,
-    pub spi1 : AfioSPIPeripheral<'a, SPI1, NotConfigured>,
-}
-
-pub struct Afio<'a>(pub &'a AFIO);
-
-impl<'a> Afio<'a> {
-    #[inline(always)]
-    pub fn get_peripherals(self) -> AfioPeripherals<'a> {
-        AfioPeripherals {
-            i2c1: AfioI2C1Peripheral(self.0, PhantomData),
-            spi1: AfioSPIPeripheral(self.0, PhantomData),
-        }
-    }
-}
+peripherals!(
+    (AfioUSART1Peripheral, usart1),
+    (AfioUSART2Peripheral, usart2),
+    (AfioI2C1Peripheral, i2c1),
+    (AfioSPI1Peripheral, spi1_remap)
+);

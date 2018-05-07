@@ -9,6 +9,8 @@ use core::ptr;
 use core::marker::PhantomData;
 use core::mem::transmute;
 
+use hal;
+use nb;
 use gpio::{Input, PinOutput, GpioPin, Pin6, Pin7, Pin9, Pin10, PinMode, PinCnf1, PinCnf3};
 use afio::{AfioUSART1Peripheral, Remapped, NotRemapped};
 use stm32f103xx::{GPIOA, GPIOB, USART1, USART2, usart1};
@@ -17,12 +19,15 @@ type_states!(IsConfigured, (NotConfigured, Configured));
 
 /// SPI instance that can be used with the `Spi` abstraction
 pub unsafe trait USART: Deref<Target = usart1::RegisterBlock> {
+    fn ptr() -> *const usart1::RegisterBlock;
 }
 
 unsafe impl USART for USART1 {
+    fn ptr() -> *const usart1::RegisterBlock { USART1::ptr() }
 }
 
 unsafe impl USART for USART2 {
+    fn ptr() -> *const usart1::RegisterBlock { USART1::ptr() }
 }
 
 /// Interrupt event
@@ -50,8 +55,10 @@ pub enum Error {
 pub struct UsartBusPorts<S, P>(PhantomData<(S, P)>)
 where S: Any + USART, P: IsConfigured;
 
+pub struct UsartTx<U>(PhantomData<U>) where U : Any+USART;
+pub struct UsartRx<U>(PhantomData<U>) where U : Any+USART;
 
-pub struct Usart<U>(pub U) where U : Any+USART;
+pub struct Usart<U>(U) where U : Any+USART;
 
 impl<U> Usart<U> where U : Any+USART {
     pub fn init(&mut self, _ports : UsartBusPorts<U, Configured>) {
@@ -75,7 +82,67 @@ impl<U> Usart<U> where U : Any+USART {
     pub fn get_write_state(&mut self) {
         let state = self.0.sr.read();
     }
+
+    pub fn split(self) -> (UsartTx<U>, UsartRx<U>) {
+        (UsartTx(PhantomData), UsartRx(PhantomData))
+    }
 }
+
+impl<U> hal::serial::Read<u8> for UsartRx<U>
+    where U: USART + Any {
+
+    type Error = Error;
+
+    fn read(&mut self) -> nb::Result<u8, Error> {
+        // NOTE(unsafe) atomic read with no side effects
+        let sr = unsafe { (*U::ptr()).sr.read() };
+        
+        Err(if sr.pe().bit_is_set() {
+            nb::Error::Other(Error::Parity)
+        } else if sr.fe().bit_is_set() {
+            nb::Error::Other(Error::Framing)
+        } else if sr.ne().bit_is_set() {
+            nb::Error::Other(Error::Noise)
+        } else if sr.ore().bit_is_set() {
+            nb::Error::Other(Error::Overrun)
+        } else if sr.rxne().bit_is_set() {
+            // NOTE(read_volatile) see `write_volatile` below
+            return Ok(unsafe {
+                ptr::read_volatile(&(*U::ptr()).dr as *const _ as *const _)
+            });
+        } else {
+            nb::Error::WouldBlock
+        })
+    }
+}
+
+impl<U> hal::serial::Write<u8> for UsartTx<U>
+    where U: USART + Any {
+        type Error = !;
+
+        fn flush(&mut self) -> nb::Result<(), !> {
+            let sr = unsafe { (*U::ptr()).sr.read() };
+
+            if sr.txe().bit_is_set() {
+                Ok(())
+            } else {
+                Err(nb::Error::WouldBlock)
+            }
+        }
+
+        fn write(&mut self, byte: u8) -> nb::Result<(), !> {
+            let sr = unsafe { (*U::ptr()).sr.read() };
+
+            if sr.txe().bit_is_set() {
+                unsafe {
+                    ptr::write_volatile(&(*U::ptr()).dr as *const _ as *mut _, byte)
+                }
+                Ok(())
+            } else {
+                Err(nb::Error::WouldBlock)
+            }
+        }
+    }
 
 impl Usart<USART1> {
     #[inline(always)]

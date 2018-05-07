@@ -3,18 +3,16 @@
 use common;
 
 use core::any::Any;
-use core::fmt::{Display, Formatter, Result};
 use core::ops::Deref;
 use core::ptr;
 use core::marker::PhantomData;
-use core::mem::transmute;
 
-use gpio::{Input, PinOutput, GpioPin, Pin4, Pin5, Pin6, Pin7, Pin12, Pin13, Pin14, Pin15, PinMode, PinCnf1, PinCnf2};
-use afio::{AfioSPIPeripheral, NotRemapped};
+use nb;
+use hal;
+
+use gpio::{Input, GpioPin, Pin4, Pin5, Pin6, Pin7, Pin12, Pin13, Pin14, Pin15, PinMode, PinCnf1, PinCnf2};
+use afio::{AfioSPI1Peripheral, IsRemapped, Remapped, NotRemapped};
 use stm32f103xx::{GPIOA, GPIOB, SPI1, SPI2, spi1, gpioa};
-
-
-type_states!(IsConfigured, (NotConfigured, Configured));
 
 
 /// SPI instance that can be used with the `Spi` abstraction
@@ -31,18 +29,8 @@ unsafe impl SPI for SPI2 {
     type GPIO = GPIOB;
 }
 
-
-pub enum SPIResult<T>
-{
-    Success(T),
-    Error(SPIError)
-}
-
 #[derive(Copy, Clone)]
-pub enum SPIError {
-    /// No known error has occured
-    None,
-    NotReady,
+pub enum Error {
     /// Timeout Failure
     /// 
     /// - SCL remained low for 25 ms
@@ -52,133 +40,35 @@ pub enum SPIError {
     /// Acknowledge Failure.
     /// 
     /// No acknowledge returned.
-    AF,
+    AcknowledgementFailure,
     /// Arbitration Lost
     /// 
     /// Arbritation to the bus is lost to another master
-    ARLO,
+    ArbitrationLost,
     /// Overrun / Underrun
     /// 
     /// - During reception a new byte is received even though the DR has not been read.
     /// - During transmission when a new byte should be sent, but the DR register has not been written to.
-    OVR,
+    Overrun,
     /// Mode fault
-    MODF,
+    ModeFault,
     /// Bus Error
-    BERR,
+    BusError,
     /// CRC Error
-    CRCERR,
+    CrcError,
 }
 
 
-impl SPIError {
-}
+pub struct SpiBusPorts<S, R>(PhantomData<(S, R)>)
+where S: Any + SPI, R: IsRemapped;
 
-impl Display for SPIError {
-    fn fmt(&self, f: &mut Formatter) -> Result {
-        match *self {
-            SPIError::None => write!(f, "None"),
-            SPIError::Timeout => write!(f,"Timeout"),
-            SPIError::AF => write!(f,"AF"),
-            SPIError::ARLO => write!(f, "ARLO"),
-            SPIError::OVR => write!(f, "OVR"),
-            SPIError::BERR => write!(f, "BERR"),
-            SPIError::MODF => write!(f, "MODF"),
-            SPIError::CRCERR => write!(f, "CRCERR"),
-            SPIError::NotReady => write!(f, "NotReady"),
-        }
-    }
-}
+pub struct Spi<'a, S, R>(pub &'a S, PhantomData<R>)
+where S: Any + SPI, R: IsRemapped;
 
-pub struct SpiBusPorts<'a, S, P>(pub &'a S, PhantomData<P>)
-where S: Any + SPI, P: IsConfigured;
-
-
-impl<'a> SpiBusPorts<'a, SPI2, NotConfigured> {
-    #[inline(always)]
-    pub fn set_ports<M>(self, 
-        _pb12 : GpioPin<'a, GPIOB, Pin12, M, PinCnf2>, 
-        _pb13 : GpioPin<'a, GPIOB, Pin13, M, PinCnf2>,
-        _pb14 : GpioPin<'a, GPIOB, Pin14, Input, PinCnf1>,
-        _pb15 : GpioPin<'a, GPIOB, Pin15, M, PinCnf2>) 
-        -> SpiBusPorts<'a, SPI2, Configured> where M : PinOutput + PinMode {
-            unsafe {
-                transmute(self)
-            }
-        }
-}
-
-impl<'a> SpiBusPorts<'a, SPI1, NotConfigured> {
-    #[inline(always)]
-    pub fn set_ports_normal<M>(self, 
-        _pa4 : GpioPin<'a, GPIOA, Pin4, M, PinCnf2>, 
-        _pa5 : GpioPin<'a, GPIOA, Pin5, M, PinCnf2>,
-        _pa6 : GpioPin<'a, GPIOA, Pin6, Input, PinCnf1>,
-        _pa7 : GpioPin<'a, GPIOA, Pin7, M, PinCnf2>,
-        _afio_spi : AfioSPIPeripheral<'a, SPI1, NotRemapped>) 
-        -> SpiBusPorts<'a, SPI1, Configured> where M : PinOutput + PinMode {
-            unsafe {
-                transmute(self)
-            }
-        }
-
-    /* #[inline(always)]
-    pub fn set_ports_remapped<M>(self, 
-        pb8 : GpioPin<'a, GPIOB, Pin8, M, PinCnf3>, 
-        pb9 : GpioPin<'a, GPIOB, Pin9, M, PinCnf3>,
-        afio_spi : AfioSPIPeripheral<'a, SPI1, Remapped>) 
-        -> SpiBusPorts<'a, SPI1, Configured> where M : PinOutput + PinMode {
-            unsafe {
-                transmute(self)
-            }
-        } */
-}
-
-type_states!(SpiStates, (Read, Write, Error));
-pub struct SpiState<'a, S : Any + SPI, ST : SpiStates>(pub &'a S, PhantomData<ST>);
-
-pub enum SpiStateOptions<'a, S: Any + SPI> {
-    CanRead(SpiState<'a, S, Read>),
-    CanWrite(SpiState<'a, S, Write>),
-    Error(SpiState<'a, S, Error>, SPIError),
-    None 
-}
-
-impl<'a, S : Any + SPI> SpiState<'a, S, Read> {
-    #[inline(always)]
-    pub fn read(self) -> u8 {
-        unsafe { ptr::read_volatile(
-            &self.0.dr as *const _ as *const u8) }
-    }
-}
-
-impl<'a, S : Any + SPI> SpiState<'a, S, Write> {
-    #[inline(always)]
-    pub fn write(self, byte: u8) {
-        unsafe { ptr::write_volatile(
-            &self.0.dr as *const _ as *mut u8, byte) }
-    }
-}
-
-pub struct Spi<'a, S>(pub &'a S)
-where S: Any + SPI;
-
-impl<'a, S> Spi<'a, S>
-where S: Any + SPI,
+impl<'a, S, R> Spi<'a, S, R>
+where S: Any + SPI, R: IsRemapped,
 {
-    pub fn start_init(&self) -> (
-        SpiBusPorts<S, NotConfigured>
-    ) {
-        let spi = self.0;
-        (
-            SpiBusPorts(spi, PhantomData)
-        )
-    }
-
-    pub fn complete_init(&self,
-        _bus_ports : SpiBusPorts<'a, S, Configured>
-        ) {
-        let spi = self.0;
+    pub fn new(spi: &'a S, _ports: SpiBusPorts<S, R>) -> Self {
 
         // enable slave select
         spi.cr2.modify(|_, w| { w.ssoe().set_bit() });
@@ -203,6 +93,8 @@ where S: Any + SPI,
             .bidimode()
             .clear_bit()
         });
+
+        Spi(spi, PhantomData)
     }
 
     pub fn listen(&self, tx : bool, rx : bool) {
@@ -229,65 +121,68 @@ where S: Any + SPI,
     pub fn enable(&self) {
         self.0.cr1.modify(|_, w| w.spe().set_bit())
     }
-    
-    pub fn get_state(&self) -> SpiStateOptions<'a, S> {
-        let spi1 = self.0;
-        let sr = spi1.sr.read();
+}
 
-        if sr.ovr().bit_is_set() {
-            SpiStateOptions::Error(SpiState(spi1, PhantomData), SPIError::OVR)
+impl<'a, S, R> hal::spi::FullDuplex<u8> for Spi<'a, S, R>
+    where S : Any + SPI, R : IsRemapped {
+        type Error = Error;
+
+    fn read(&mut self) -> nb::Result<u8, Error> {
+        let sr = self.0.sr.read();
+
+        Err(if sr.ovr().bit_is_set() {
+            nb::Error::Other(Error::Overrun)
         } else if sr.modf().bit_is_set() {
-            SpiStateOptions::Error(SpiState(spi1, PhantomData), SPIError::MODF)
+            nb::Error::Other(Error::ModeFault)
         } else if sr.crcerr().bit_is_set() {
-            SpiStateOptions::Error(SpiState(spi1, PhantomData), SPIError::CRCERR)
+            nb::Error::Other(Error::CrcError)
         } else if sr.rxne().bit_is_set() {
-            SpiStateOptions::CanRead(SpiState(spi1, PhantomData))
-        } else if sr.txe().bit_is_set() {
-            SpiStateOptions::CanWrite(SpiState(spi1, PhantomData))
+            return Ok(unsafe { 
+                ptr::read_volatile(&self.0.dr as *const _ as *const u8)
+            });
         } else {
-            SpiStateOptions::None
-        }
+            nb::Error::WouldBlock
+        })
     }
 
-    pub fn read(&self) -> SPIResult<u8> {
-        let spi1 = self.0;
-        let sr = spi1.sr.read();
+    fn send(&mut self, byte: u8) -> nb::Result<(), Error> {
+        let sr = self.0.sr.read();
 
-
-        if sr.ovr().bit_is_set() {
-            SPIResult::Error(SPIError::OVR)
+        Err(if sr.ovr().bit_is_set() {
+            nb::Error::Other(Error::Overrun)
         } else if sr.modf().bit_is_set() {
-            SPIResult::Error(SPIError::MODF)
+            nb::Error::Other(Error::ModeFault)
         } else if sr.crcerr().bit_is_set() {
-            SPIResult::Error(SPIError::CRCERR)
+            nb::Error::Other(Error::CrcError)
         } else if sr.rxne().bit_is_set() {
-            // NOTE(write_volatile) see note above
-            unsafe {
-                SPIResult::Success(ptr::read_volatile(&spi1.dr as *const _ as *const u8))
-            }
+            unsafe { ptr::write_volatile(&self.0.dr as * const _ as *mut u8, byte) }
+            return Ok(());
         } else {
-            SPIResult::Error(SPIError::NotReady)
-        }
+            nb::Error::WouldBlock
+        })
     }
-    
-    pub fn send(&self, byte: u8) -> SPIError {
-        let spi1 = self.0;
-        let sr = spi1.sr.read();
+}
 
-        if sr.ovr().bit_is_set() {
-            SPIError::OVR 
-        } else if sr.modf().bit_is_set() {
-            SPIError::MODF
-        } else if sr.crcerr().bit_is_set() {
-            SPIError::CRCERR
-        } else if sr.txe().bit_is_set() {
-            // NOTE(write_volatile) see note above
-            unsafe {
-                ptr::write_volatile(&spi1.dr as *const _ as *mut u8, byte)
-            }
-            SPIError::None
-        } else {
-            SPIError::NotReady
+impl<'a> Spi<'a, SPI1, NotRemapped> {
+    pub fn remapped_ports<M>(
+        _pa4 : GpioPin<'a, GPIOA, Pin4, M, PinCnf2>, 
+        _pa5 : GpioPin<'a, GPIOA, Pin5, M, PinCnf2>,
+        _pa6 : GpioPin<'a, GPIOA, Pin6, Input, PinCnf1>,
+        _pa7 : GpioPin<'a, GPIOA, Pin7, M, PinCnf2>,
+        _afio_spi : AfioSPI1Peripheral<'a, NotRemapped>) -> SpiBusPorts<SPI1, NotRemapped> 
+        where M : PinMode {
+            SpiBusPorts(PhantomData)
         }
-    }
+}
+
+impl<'a> Spi<'a, SPI2, Remapped> {
+    pub fn remapped_ports<M>(
+        _pa4 : GpioPin<'a, GPIOA, Pin4, M, PinCnf2>, 
+        _pb12 : GpioPin<'a, GPIOB, Pin12, M, PinCnf2>, 
+        _pb13 : GpioPin<'a, GPIOB, Pin13, M, PinCnf2>,
+        _pb14 : GpioPin<'a, GPIOB, Pin14, Input, PinCnf1>,
+        _pb15 : GpioPin<'a, GPIOB, Pin15, M, PinCnf2>) -> SpiBusPorts<SPI2, NotRemapped> 
+        where M : PinMode {
+            SpiBusPorts(PhantomData)        
+        }
 }

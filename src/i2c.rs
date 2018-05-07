@@ -13,13 +13,13 @@
 #[allow(unused_imports)]
 use common;
 
-use core::any::{Any, TypeId};
+use core::any::{Any};
 use core::fmt::{Display, Formatter, Result};
 use core::ops::Deref;
 use core::marker::PhantomData;
 use core::mem::transmute;
 
-use stm32f103xx::{AFIO, GPIOB, I2C1, I2C2, i2c1, RCC};
+use stm32f103xx::{GPIOB, I2C1, I2C2, i2c1};
 
 use ::gpio::*;
 use ::afio::*;
