@@ -65,6 +65,30 @@ where S: Any + SPI, R: IsRemapped;
 pub struct Spi<'a, S, R>(pub &'a S, PhantomData<R>)
 where S: Any + SPI, R: IsRemapped;
 
+impl<'a> Spi<'a, SPI1, NotRemapped> {
+    pub fn normal_ports<M>(
+        _pa4 : GpioPin<GPIOA, Pin4, M, PinCnf2>, 
+        _pa5 : GpioPin<GPIOA, Pin5, M, PinCnf2>,
+        _pa6 : GpioPin<GPIOA, Pin6, Input, PinCnf1>,
+        _pa7 : GpioPin<GPIOA, Pin7, M, PinCnf2>,
+        _afio_spi : AfioSPI1Peripheral<NotRemapped>) -> SpiBusPorts<SPI1, NotRemapped> 
+        where M : PinMode {
+            SpiBusPorts(PhantomData)
+        }
+}
+
+impl<'a> Spi<'a, SPI2, Remapped> {
+    pub fn remapped_ports<M>(
+        _pa4 : GpioPin<GPIOA, Pin4, M, PinCnf2>, 
+        _pb12 : GpioPin<GPIOB, Pin12, M, PinCnf2>, 
+        _pb13 : GpioPin<GPIOB, Pin13, M, PinCnf2>,
+        _pb14 : GpioPin<GPIOB, Pin14, Input, PinCnf1>,
+        _pb15 : GpioPin<GPIOB, Pin15, M, PinCnf2>) -> SpiBusPorts<SPI2, NotRemapped> 
+        where M : PinMode {
+            SpiBusPorts(PhantomData)        
+        }
+}
+
 impl<'a, S, R> Spi<'a, S, R>
 where S: Any + SPI, R: IsRemapped,
 {
@@ -161,28 +185,4 @@ impl<'a, S, R> hal::spi::FullDuplex<u8> for Spi<'a, S, R>
             nb::Error::WouldBlock
         })
     }
-}
-
-impl<'a> Spi<'a, SPI1, NotRemapped> {
-    pub fn normal_ports<M>(
-        _pa4 : GpioPin<'a, GPIOA, Pin4, M, PinCnf2>, 
-        _pa5 : GpioPin<'a, GPIOA, Pin5, M, PinCnf2>,
-        _pa6 : GpioPin<'a, GPIOA, Pin6, Input, PinCnf1>,
-        _pa7 : GpioPin<'a, GPIOA, Pin7, M, PinCnf2>,
-        _afio_spi : AfioSPI1Peripheral<'a, NotRemapped>) -> SpiBusPorts<SPI1, NotRemapped> 
-        where M : PinMode {
-            SpiBusPorts(PhantomData)
-        }
-}
-
-impl<'a> Spi<'a, SPI2, Remapped> {
-    pub fn remapped_ports<M>(
-        _pa4 : GpioPin<'a, GPIOA, Pin4, M, PinCnf2>, 
-        _pb12 : GpioPin<'a, GPIOB, Pin12, M, PinCnf2>, 
-        _pb13 : GpioPin<'a, GPIOB, Pin13, M, PinCnf2>,
-        _pb14 : GpioPin<'a, GPIOB, Pin14, Input, PinCnf1>,
-        _pb15 : GpioPin<'a, GPIOB, Pin15, M, PinCnf2>) -> SpiBusPorts<SPI2, NotRemapped> 
-        where M : PinMode {
-            SpiBusPorts(PhantomData)        
-        }
 }

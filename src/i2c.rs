@@ -203,8 +203,8 @@ where S: Any + I2C, P: IsConfigured;
 impl<'a> I2cBusPorts<'a, I2C1, NotConfigured> {
     #[inline(always)]
     pub fn set_ports_normal<M>(self, 
-        _pb6 : GpioPin<'a, GPIOB, Pin6, M, PinCnf3>, 
-        _pb7 : GpioPin<'a, GPIOB, Pin7, M, PinCnf3>,
+        _pb6 : GpioPin<GPIOB, Pin6, M, PinCnf3>, 
+        _pb7 : GpioPin<GPIOB, Pin7, M, PinCnf3>,
         _afio_i2c : AfioI2C1Peripheral<'a, NotRemapped>) 
         -> I2cBusPorts<'a, I2C1, Configured> where M : PinOutput + PinMode {
             unsafe {
@@ -214,8 +214,8 @@ impl<'a> I2cBusPorts<'a, I2C1, NotConfigured> {
 
     #[inline(always)]
     pub fn set_ports_remapped<M>(self, 
-        _pb8 : GpioPin<'a, GPIOB, Pin8, M, PinCnf3>, 
-        _pb9 : GpioPin<'a, GPIOB, Pin9, M, PinCnf3>,
+        _pb8 : GpioPin<GPIOB, Pin8, M, PinCnf3>, 
+        _pb9 : GpioPin<GPIOB, Pin9, M, PinCnf3>,
         _afio_i2c : AfioI2C1Peripheral<'a, Remapped>) 
         -> I2cBusPorts<'a, I2C1, Configured> where M : PinOutput + PinMode {
             unsafe {

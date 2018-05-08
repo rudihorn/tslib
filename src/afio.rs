@@ -33,6 +33,14 @@ peripheral_macro!(AfioUSART2Peripheral, usart2_remap);
 peripheral_macro!(AfioI2C1Peripheral, i2c1_remap);
 peripheral_macro!(AfioSPI1Peripheral, spi1_remap);
 
+pub struct Afio<'a>(pub &'a AFIO);
+
+impl <'a> Afio<'a> {
+    pub fn new(afio : &'a AFIO) -> Self {
+        Afio(afio)
+    }
+}
+
 macro_rules! peripherals {
     ( $(($periph:ident, $name:ident)),* ) => {
         pub struct AfioPeripherals<'a> {
@@ -40,8 +48,6 @@ macro_rules! peripherals {
                 pub $name : $periph<'a, NotConfigured>,
             )*
         }
-
-        pub struct Afio<'a>(pub &'a AFIO);
 
         impl <'a> Afio<'a> {
             #[inline(always)]
@@ -60,5 +66,5 @@ peripherals!(
     (AfioUSART1Peripheral, usart1),
     (AfioUSART2Peripheral, usart2),
     (AfioI2C1Peripheral, i2c1),
-    (AfioSPI1Peripheral, spi1_remap)
+    (AfioSPI1Peripheral, spi1)
 );
