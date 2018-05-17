@@ -2,24 +2,20 @@
 
 use stm32f103xx::{flash, FLASH};
 
-/// Extension trait to constrain the FLASH peripheral
-pub trait FlashExt {
-    /// Constrains the FLASH peripheral to play nicely with the other abstractions
-    fn constrain(self) -> Parts;
+
+#[allow(dead_code)]
+pub struct Flash {
+    flash: FLASH,
+    pub acr: ACR,
 }
 
-impl FlashExt for FLASH {
-    fn constrain(self) -> Parts {
-        Parts {
-            acr: ACR { _0: () },
+impl Flash {
+    pub fn new(flash: FLASH) -> Self {
+        Self {
+            flash: flash,
+            acr: ACR {_0: ()}
         }
     }
-}
-
-/// Constrained FLASH peripheral
-pub struct Parts {
-    /// Opaque ACR register
-    pub acr: ACR,
 }
 
 /// Opaque ACR register

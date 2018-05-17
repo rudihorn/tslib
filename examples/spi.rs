@@ -10,7 +10,7 @@ pub use tslib::stm32f103xx as stm32;
 
 use tslib::{flash, rcc, afio, spi, gpio};
 
-use flash::FlashExt;
+use flash::Flash;
 use rcc::{Rcc};
 use afio::Afio;
 use gpio::{Gpio};
@@ -20,7 +20,7 @@ fn main() {
     let _cp = cortex_m::Peripherals::take().unwrap();
     let dp = stm32::Peripherals::take().unwrap();
 
-    let mut flash = dp.FLASH.constrain();
+    let mut flash = Flash::new(dp.FLASH);
 
     let rcc = Rcc::new(dp.RCC);
     let _clocks = rcc.cfgr.freeze(&mut flash.acr);
@@ -38,6 +38,6 @@ fn main() {
 
     let _spi1 = Spi::new(
         &dp.SPI1, 
-        Spi::normal_ports(pa4, pa5, pa6, pa7, afio_periph.spi1.set_not_remapped())
+        Spi::ports_normal(pa4, pa5, pa6, pa7, afio_periph.spi1.set_not_remapped())
     );
 }

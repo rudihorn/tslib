@@ -184,23 +184,23 @@ where G: GPIO, M: PinMode, C: PinCnf, P: Pins + PinNr {
 impl<G, P, C> GpioPin<G, P, Input, C>
 where G: GPIO, C: PinCnf, P: Pins + PinNr {
     #[inline(always)]
-    pub fn set_analog(mut self) -> GpioPin<G, P, Input, PinCnf0>{
+    pub fn set_analog(self) -> GpioPin<G, P, Input, PinCnf0>{
         self.set_cnf_0()
     }
 
     #[inline(always)]
-    pub fn set_floating_input(mut self) -> GpioPin<G, P, Input, PinCnf1>{
+    pub fn set_floating_input(self) -> GpioPin<G, P, Input, PinCnf1>{
         self.set_cnf_1()
     }
 
     #[inline(always)]
-    pub fn set_pull_up_down(mut self) -> GpioPin<G, P, Input, PinCnf2> {
+    pub fn set_pull_up_down(self) -> GpioPin<G, P, Input, PinCnf2> {
         self.set_cnf_2()
     }
 
     #[inline(always)]
-    pub fn set_pull_down(mut self) -> GpioPin<G, P, Input, PinCnf2> {
-        let mut p = self.set_pull_up_down();
+    pub fn set_pull_down(self) -> GpioPin<G, P, Input, PinCnf2> {
+        let p = self.set_pull_up_down();
         unsafe {
             p.gpio().odr.write(|w| w.bits(1 << P::nr()));
         }

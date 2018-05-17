@@ -9,14 +9,14 @@ authors = ["Rudi Horn <dyn-git@rudi-horn.de>"]
 
 [dependencies]
 nb = "0.1.1"
-cortex-m = "0.4.3"
-embedded-hal = "0.1.2"
-stm32f103xx = "0.9.1"
+cortex-m = "0.5.1"
+embedded-hal = "0.2.1"
+stm32f103xx = "0.10.0"
 
 [dev-dependencies]
 panic-abort = "0.1.1"
 cortex-m-rtfm = "0.3.1"
-stm32f103xx = { version = "0.9.1", features = ["rt"] }
+stm32f103xx = { version = "0.10.0", features = ["rt"] }
 
 [features]
 rt = ["stm32f103xx/rt"]

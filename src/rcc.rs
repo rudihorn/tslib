@@ -67,6 +67,8 @@ impl Rcc {
         }
     }
 
+    // TODO: remove `allow`
+    #[allow(dead_code)]
     fn ptr<'a>() -> &'a rcc::RegisterBlock {
         unsafe { &(*RCC::ptr()) }
     }
@@ -306,6 +308,8 @@ impl Clocks {
         self.pclk2
     }
 
+    // TODO remove `allow`
+    #[allow(dead_code)]
     pub(crate) fn ppre1(&self) -> u8 {
         self.ppre1
     }

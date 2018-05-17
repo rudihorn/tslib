@@ -66,7 +66,7 @@ pub struct Spi<'a, S, R>(pub &'a S, PhantomData<R>)
 where S: Any + SPI, R: IsRemapped;
 
 impl<'a> Spi<'a, SPI1, NotRemapped> {
-    pub fn normal_ports<M>(
+    pub fn ports_normal<M>(
         _pa4 : GpioPin<GPIOA, Pin4, M, PinCnf2>, 
         _pa5 : GpioPin<GPIOA, Pin5, M, PinCnf2>,
         _pa6 : GpioPin<GPIOA, Pin6, Input, PinCnf1>,
@@ -78,7 +78,7 @@ impl<'a> Spi<'a, SPI1, NotRemapped> {
 }
 
 impl<'a> Spi<'a, SPI2, Remapped> {
-    pub fn remapped_ports<M>(
+    pub fn ports_remapped<M>(
         _pa4 : GpioPin<GPIOA, Pin4, M, PinCnf2>, 
         _pb12 : GpioPin<GPIOB, Pin12, M, PinCnf2>, 
         _pb13 : GpioPin<GPIOB, Pin13, M, PinCnf2>,
