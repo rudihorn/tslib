@@ -9,9 +9,12 @@ use core::marker::PhantomData;
 
 use nb;
 use hal;
+use rcc;
 
+use time::Hertz;
+use rcc::{Clocks, RccPeripheral};
 use gpio::{Input, GpioPin, Pin4, Pin5, Pin6, Pin7, Pin12, Pin13, Pin14, Pin15, PinMode, PinCnf1, PinCnf2};
-use afio::{AfioSPI1Peripheral, IsRemapped, Remapped, NotRemapped};
+use afio::{AfioPeripheral, IsRemapped, Remapped, NotRemapped};
 use stm32f103xx::{GPIOA, GPIOB, SPI1, SPI2, spi1, gpioa};
 
 
@@ -71,7 +74,7 @@ impl<'a> Spi<'a, SPI1, NotRemapped> {
         _pa5 : GpioPin<GPIOA, Pin5, M, PinCnf2>,
         _pa6 : GpioPin<GPIOA, Pin6, Input, PinCnf1>,
         _pa7 : GpioPin<GPIOA, Pin7, M, PinCnf2>,
-        _afio_spi : AfioSPI1Peripheral<NotRemapped>) -> SpiBusPorts<SPI1, NotRemapped> 
+        _afio_spi : AfioPeripheral<SPI1, NotRemapped>) -> SpiBusPorts<SPI1, NotRemapped> 
         where M : PinMode {
             SpiBusPorts(PhantomData)
         }
@@ -92,10 +95,22 @@ impl<'a> Spi<'a, SPI2, Remapped> {
 impl<'a, S, R> Spi<'a, S, R>
 where S: Any + SPI, R: IsRemapped,
 {
-    pub fn new(spi: &'a S, _ports: SpiBusPorts<S, R>) -> Self {
+    pub fn new(spi: &'a S, _ports: SpiBusPorts<S, R>, _rcc_periph: RccPeripheral<S, rcc::Enabled>, freq: Hertz, clocks: Clocks) -> Self {
 
         // enable slave select
         spi.cr2.modify(|_, w| { w.ssoe().set_bit() });
+
+        let br = match clocks.pclk2().0 / freq.0 {
+            0 => unreachable!(),
+            1...2 => 0b000,
+            3...5 => 0b001,
+            6...11 => 0b010,
+            12...23 => 0b011,
+            24...47 => 0b100,
+            48...95 => 0b101,
+            96...191 => 0b110,
+            _ => 0b111,
+        };
 
         spi.cr1.write(|w| {
             w.cpha()
@@ -105,7 +120,7 @@ where S: Any + SPI, R: IsRemapped,
             .mstr()
             .set_bit()
             .br()
-            .bits(0b10)
+            .bits(br)
             .lsbfirst()
             .clear_bit()
             .ssm()

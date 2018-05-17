@@ -15,8 +15,9 @@ stm32f103xx = "0.10.0"
 
 [dev-dependencies]
 panic-abort = "0.1.1"
-cortex-m-rtfm = "0.3.1"
+cortex-m-rt = "0.5.0"
 stm32f103xx = { version = "0.10.0", features = ["rt"] }
 
 [features]
+doc = []
 rt = ["stm32f103xx/rt"]

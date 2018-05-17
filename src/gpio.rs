@@ -146,35 +146,30 @@ where G: GPIO, M: PinMode, C: PinCnf, P: Pins + PinNr {
     }
 
     #[inline(always)]
-    #[allow(non_snake_case)]
     pub fn set_input(mut self) -> GpioPin<G, P, Input, C> {
         self.set_mode_val(0b00);
         GpioPin(self.0, PhantomData)
     }
 
     #[inline(always)]
-    #[allow(non_snake_case)]
     pub fn set_cnf_0(mut self) -> GpioPin<G, P, M, PinCnf0> {
         self.set_cnf_val(0b00);
         GpioPin(self.0, PhantomData)
     }
 
     #[inline(always)]
-    #[allow(non_snake_case)]
     pub fn set_cnf_1(mut self) -> GpioPin<G, P, M, PinCnf1> {
         self.set_cnf_val(0b01);
         GpioPin(self.0, PhantomData)
     }
 
     #[inline(always)]
-    #[allow(non_snake_case)]
     pub fn set_cnf_2(mut self) -> GpioPin<G, P, M, PinCnf2> {
         self.set_cnf_val(0b10);
         GpioPin(self.0, PhantomData)
     }
 
     #[inline(always)]
-    #[allow(non_snake_case)]
     pub fn set_cnf_3(mut self) -> GpioPin<G, P, M, PinCnf3> {
         self.set_cnf_val(0b11);
         GpioPin(self.0, PhantomData)

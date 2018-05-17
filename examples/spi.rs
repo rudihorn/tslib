@@ -38,6 +38,7 @@ fn main() {
 
     let _spi1 = Spi::new(
         &dp.SPI1, 
-        Spi::ports_normal(pa4, pa5, pa6, pa7, afio_periph.spi1.set_not_remapped())
+        Spi::ports_normal(pa4, pa5, pa6, pa7, afio_periph.spi1.set_not_remapped()),
+        rcc.peripherals.sp1.enable(),
     );
 }

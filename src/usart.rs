@@ -9,11 +9,13 @@ use core::marker::PhantomData;
 
 use hal;
 use nb;
-use rcc::Clocks;
+use rcc;
+
+use rcc::{Clocks, RccPeripheral};
 use time::Bps;
 use gpio::{Input, PinOutput, GpioPin, Pin6, Pin7, Pin9, Pin10, PinMode, PinCnf1, PinCnf2};
-use afio::{AfioUSART1Peripheral, IsRemapped, Remapped, NotRemapped};
-pub use stm32f103xx::{GPIOA, GPIOB, USART1, USART2, usart1};
+use afio::{AfioPeripheral, IsRemapped, Remapped, NotRemapped};
+use stm32f103xx::{GPIOA, GPIOB, USART1, USART2, USART3, usart1};
 
 type_states!(IsConfigured, (NotConfigured, Configured));
 
@@ -27,7 +29,11 @@ unsafe impl USART for USART1 {
 }
 
 unsafe impl USART for USART2 {
-    fn ptr() -> *const usart1::RegisterBlock { USART1::ptr() }
+    fn ptr() -> *const usart1::RegisterBlock { USART2::ptr() }
+}
+
+unsafe impl USART for USART3 {
+    fn ptr() -> *const usart1::RegisterBlock { USART3::ptr() }
 }
 
 /// Interrupt event
@@ -72,7 +78,7 @@ pub struct Usart<U, R> where U : Any+USART, R: IsRemapped {
 }
 
 impl<U, R> Usart<U, R> where U : Any+USART, R: IsRemapped {
-    pub fn new(usart: U, ports : UsartBusPorts<U, R>, baud_rate: Bps, clocks: Clocks) -> Self {
+    pub fn new(usart: U, ports : UsartBusPorts<U, R>, _rcc_periph: RccPeripheral<U, rcc::Enabled>, baud_rate: Bps, clocks: Clocks) -> Self {
 
         usart.cr3.write(|w| w.dmat().set_bit()
             .dmar().set_bit());
@@ -171,7 +177,7 @@ impl Usart<USART1, NotRemapped> {
     pub fn ports_normal<M>( 
         _pa9_tx : GpioPin<GPIOA, Pin9, M, PinCnf2>, 
         _pa10_rx : GpioPin<GPIOA, Pin10, Input, PinCnf1>,
-        _afio : AfioUSART1Peripheral<NotRemapped>) 
+        _afio : AfioPeripheral<USART1, NotRemapped>) 
         -> UsartBusPorts<USART1, NotRemapped> where M : PinOutput + PinMode {
             UsartBusPorts {
                 usart: PhantomData,
@@ -185,7 +191,7 @@ impl Usart<USART1, Remapped> {
     pub fn ports_remapped<M>( 
         _pb6_tx : GpioPin<GPIOB, Pin6, M, PinCnf2>, 
         _pb7_rx : GpioPin<GPIOB, Pin7, Input, PinCnf1>,
-        _afio : AfioUSART1Peripheral<Remapped>) 
+        _afio : AfioPeripheral<USART1, Remapped>) 
         -> UsartBusPorts<USART1, Remapped> where M : PinOutput + PinMode {
             UsartBusPorts {
                 usart: PhantomData,
