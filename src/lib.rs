@@ -6,7 +6,10 @@
 pub mod common;
 
 pub extern crate cortex_m;
+
+#[macro_use(block)]
 pub extern crate nb;
+
 pub extern crate embedded_hal as hal;
 pub extern crate stm32f103xx;
 

@@ -1,5 +1,8 @@
 //! I2C Bus
 //! 
+//! Credits for much of this module go to: 
+//!     https://github.com/ilya-epifanov/stm32f103xx-hal/blob/master/src/i2c.rs
+//! 
 //! # I2C1
 //! 
 //! - SCL = PB6 (remapped: PB8)
@@ -13,16 +16,22 @@
 #[allow(unused_imports)]
 use common;
 
+use core::result::Result;
 use core::any::{Any};
-use core::fmt::{Display, Formatter, Result};
+use core::fmt;
 use core::ops::Deref;
 use core::marker::PhantomData;
-use core::mem::transmute;
 
 use stm32f103xx::{GPIOB, I2C1, I2C2, i2c1};
 
-use ::gpio::*;
-use ::afio::*;
+#[macro_use(block)]
+use nb;
+
+use afio::{AfioPeripheral, IsRemapped, Remapped, NotRemapped};
+use gpio::{GpioPin, Pin6, Pin7, Pin8, Pin9, PinCnf3, PinOutput, PinMode};
+use rcc::Clocks;
+use time::Hertz;
+use hal::blocking::i2c as hal_i2c;
 
 
 pub unsafe trait I2C: Deref<Target = i2c1::RegisterBlock> {
@@ -36,60 +45,8 @@ unsafe impl I2C for I2C2 {
 }
 
 
-pub enum I2CState {
-    Ok,
-    /// The I2C module is still busy, so wait for a further response
-    Busy,
-    /// The module has encountered the error `I2CError`
-    Error(I2CError)
-}
-
-type I2CWriteState = I2CState;
-
-impl I2CWriteState {
-    pub fn cont<F>(&self, mut f : F) -> I2CWriteState 
-    where F : FnMut() -> I2CWriteState {
-        match *self {
-            I2CState::Ok => f(),
-            I2CState::Busy => I2CState::Busy,
-            I2CState::Error(err) => I2CState::Error(err)
-        }
-    }
-}
-
-type I2CReadState = I2CState;
-
-impl I2CState {
-    #[inline(always)]
-    pub fn is_ok(&self) -> bool {
-        match *self {
-            I2CState::Ok => true,
-            _ => false
-        }
-    }
-
-    #[inline(always)]
-    pub fn is_busy(&self) -> bool {
-        match *self {
-            I2CState::Busy => true,
-            _ => false
-        }
-    }
-}
-
-impl Display for I2CState {
-    fn fmt(&self, f: &mut Formatter) -> Result {
-        match *self {
-            I2CState::Ok => write!(f, "Ok"),
-            I2CState::Busy => write!(f, "Busy"),
-            I2CState::Error(ref err) => write!(f, "Error<{}>", err)
-        }
-    }
-}
-
-
 #[derive(Copy, Clone)]
-pub enum I2CError {
+pub enum Error {
     /// No known error has occured
     None,
     /// Timeout Failure
@@ -115,384 +72,286 @@ pub enum I2CError {
     BERR,
 }
 
-
-impl I2CError {
-    pub fn if_no_err<F>(&self, fun : F) -> I2CState
-        where F: Fn() -> I2CState {
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            I2CError::None => fun(),
-            ref err => I2CState::Error(*err)
+            Error::None => write!(f, "None"),
+            Error::Timeout => write!(f,"Timeout"),
+            Error::AF => write!(f,"AF"),
+            Error::ARLO => write!(f, "ARLO"),
+            Error::OVR => write!(f, "OVR"),
+            Error::BERR => write!(f, "BERR")
         }
     }
 }
 
-impl Display for I2CError {
-    fn fmt(&self, f: &mut Formatter) -> Result {
-        match *self {
-            I2CError::None => write!(f, "None"),
-            I2CError::Timeout => write!(f,"Timeout"),
-            I2CError::AF => write!(f,"AF"),
-            I2CError::ARLO => write!(f, "ARLO"),
-            I2CError::OVR => write!(f, "OVR"),
-            I2CError::BERR => write!(f, "BERR")
-        }
-    }
+pub struct I2c<S, R> where S: Any + I2C, R: IsRemapped {
+    i2c: S,
+    remapped: PhantomData<R>
 }
 
-type_states!(IsConfigured, (NotConfigured, Configured));
-
-
-pub struct I2cFrequency<'a, S, C>(pub &'a S, PhantomData<C>)
-where S: Any + I2C, C: IsConfigured;
-
-impl<'a, S> I2cFrequency<'a, S, NotConfigured> where S: Any + I2C {
-    #[inline(always)]
-    pub fn set(self, freq : u8) -> I2cFrequency<'a, S, Configured> {
-        unsafe {
-            self.0.cr2.modify(|_, w| {w.freq().bits(freq)});
-            transmute(self) 
-        }
-    }
+pub struct I2cBusPorts<S, R> where S: Any + I2C, R: IsRemapped {
+    i2c: PhantomData<S>,
+    remapped: PhantomData<R>
 }
 
-pub struct I2cTrise<'a, S, C>(pub &'a S, PhantomData<C>)
-where S: Any + I2C, C: IsConfigured;
-
-impl<'a, S> I2cTrise<'a, S, NotConfigured> where S: Any + I2C {
-    /// set TRISE rise time
-    /// for SM mode it is 1000ns for FM mode it is 300ns
-    /// assuming T_PLCK1 = 125ns, 300ns / 125 ns ~ 2.4, round up to 3 and then +1
-    #[inline(always)]
-    pub fn set(self, trise : u8) -> I2cTrise<'a, S, Configured> {
-        unsafe {
-            self.0.trise.modify(|_, w| {w.trise().bits(trise)});
-            transmute(self) 
-        }
-    }
+#[derive(PartialEq, Clone, Copy)]
+pub enum I2cDutyCycle {
+    Ratio1to1,
+    Ratio16to9,
 }
 
 
-type_states!(BusSpeedMode, (NotSelected, SlowMode, FastMode));
-type_group!(BusSpeedModeConfigured, (SlowMode, FastMode));
-
-pub struct I2cBusSpeedMode<'a, S, M>(pub &'a S, PhantomData<M>)
-where S: Any + I2C, M : BusSpeedMode;
-
-
-impl<'a, S> I2cBusSpeedMode<'a, S, NotSelected> where S: Any + I2C {
-    #[inline(always)]
-    pub fn set_slow_mode(self, ccr: u16) -> I2cBusSpeedMode<'a, S, SlowMode> {
-        unsafe {
-            self.0.ccr.modify(|_, w| { w.ccr().bits(ccr) });
-            transmute(self) 
-        }
-    }
-
-    #[inline(always)]
-    pub fn set_fast_mode(self, ccr : u16) -> I2cBusSpeedMode<'a, S, FastMode> {
-        unsafe {
-            self.0.ccr.modify(|_, w| { w.f_s().set_bit().ccr().bits(ccr) });
-            transmute(self)
-        }
-    }
-}
-
-pub struct I2cBusPorts<'a, S, P>(pub &'a S, PhantomData<P>)
-where S: Any + I2C, P: IsConfigured;
-
-impl<'a> I2cBusPorts<'a, I2C1, NotConfigured> {
-    #[inline(always)]
-    pub fn set_ports_normal<M>(self, 
-        _pb6 : GpioPin<GPIOB, Pin6, M, PinCnf3>, 
-        _pb7 : GpioPin<GPIOB, Pin7, M, PinCnf3>,
-        _afio_i2c : AfioPeripheral<'a, I2C1, NotRemapped>) 
-        -> I2cBusPorts<'a, I2C1, Configured> where M : PinOutput + PinMode {
-            unsafe {
-                transmute(self)
-            }
-        }
-
-    #[inline(always)]
-    pub fn set_ports_remapped<M>(self, 
-        _pb8 : GpioPin<GPIOB, Pin8, M, PinCnf3>, 
-        _pb9 : GpioPin<GPIOB, Pin9, M, PinCnf3>,
-        _afio_i2c : AfioPeripheral<'a, I2C1, Remapped>) 
-        -> I2cBusPorts<'a, I2C1, Configured> where M : PinOutput + PinMode {
-            unsafe {
-                transmute(self)
-            }
-        }
-}
-
-type_states!(I2cStates, (Start, Read, Write));
-
-pub struct I2cState<'a, S : Any + I2C, ST : I2cStates>(pub &'a S, PhantomData<ST>);
-
-pub enum I2cStateOptions<'a, S: Any + I2C> {
-    Started(I2cState<'a, S, Start>),
-    CanRead(I2cState<'a, S, Read>),
-    CanWrite(I2cState<'a, S, Write>),
-    Unknown
-}
-
-pub struct I2c<'a, S>(pub &'a S)
-where 
-    S: Any + I2C; 
-
-impl<'a, S: Any + I2C> I2cState<'a, S, Start> {
-
-    #[inline(always)]
-    pub fn write_address(&self, addr : u8, read : bool) {
-        let dat = (addr << 1) | (if read {1} else {0});
-        self.0.dr.write(|w| unsafe { w.bits(dat as u32) });
-    }
-
-    #[inline(always)]
-    pub fn stop(&self) {
-        self.0.cr1.modify(|_,w| { w.stop().set_bit() });
-    }
-}
-
-impl<'a, S: Any + I2C> I2cState<'a, S, Write> {
-
-    #[inline(always)]
-    pub fn suspend(&self) {
-        self.0.cr2.modify(|_, w| {w.itevten().clear_bit()})
-    }
-
-    #[inline(always)]
-    pub fn write(&self, dat: u8) {
-        self.0.dr.write(|w| unsafe { w.bits(dat as u32) });
-    }
-
-    #[inline(always)]
-    pub fn stop(&self) {
-        self.0.cr1.modify(|_,w| { w.stop().set_bit() });
-    }
-}
-
-
-impl<'a, S> I2c<'a, S>
+impl<S, R> I2c<S, R>
 where
-    S: Any + I2C
+    S: Any + I2C,
+    R: IsRemapped
 {
 
-    pub fn start_init(&self) -> (
-        I2cBusSpeedMode<'a, S, NotSelected>,
-        I2cFrequency<'a, S, NotConfigured>,
-        I2cTrise<'a, S, NotConfigured>,
-        I2cBusPorts<'a, S, NotConfigured>,
-       ) {
-        (
-            I2cBusSpeedMode(self.0, PhantomData),
-            I2cFrequency(self.0, PhantomData), 
-            I2cTrise(self.0, PhantomData),
-            I2cBusPorts(self.0, PhantomData)
-        )
-    }
-
-    pub fn complete_init<M>(&self, 
-        _bsm : I2cBusSpeedMode<'a, S, M>, 
-        _freq : I2cFrequency<'a, S, Configured>,
-        _trise : I2cTrise<'a, S, Configured>,
-        _bp : I2cBusPorts<'a, S, Configured>
-    ) where M : BusSpeedMode + BusSpeedModeConfigured {
-        self.0.cr1.modify(|_, w| {w.pe().set_bit()});
-    }
-
-    pub fn listen(&self) {
-        self.0.cr2.modify(|_, w| {w.itevten().set_bit().iterren().set_bit()})
-    }
-
-    fn get_error(&self, sr1: i2c1::sr1::R) -> I2CError {
-        if sr1.timeout().bit_is_set() {
-            return I2CError::Timeout
-        } else if sr1.af().bit_is_set() {
-            return I2CError::AF
-        } else if sr1.arlo().bit_is_set() {
-            return I2CError::ARLO
-        } else if sr1.ovr().bit_is_set() {
-            return I2CError::OVR
-        } else if sr1.berr().bit_is_set() {
-            return I2CError::BERR
-        }
-
-        I2CError::None
-    }
-
-    // reads the SB (Start Bit) of the Status 1 register
-    pub fn is_start_flag_set_async(&self) -> bool {
-        let state = self.0.sr1.read();
-        let sb = state.sb().bit_is_set();
-        sb
-    }
-
-    // reads the SB (Start Bit) of the Status 1 register
-    pub fn is_start_flag_set(&self) -> I2CState {
-        let state = self.0.sr1.read();
-        let sb = state.sb().bit_is_set();
-        self.get_error(state).if_no_err(|| {
-            if sb { I2CState::Ok } else { I2CState::Busy }
-        })
-    }
-
-    /// read the master mode flag
-    pub fn is_msl_flag_set(&self) -> bool {
-        self.0.sr2.read().msl().bit_is_set()
-    }
-
-    /// Determine if slave address matched
-    pub fn is_addr_flag_set(&self) -> I2CState {
-        let state = self.0.sr1.read();
-        let addr = state.addr().bit_is_set();
-        self.get_error(state).if_no_err(|| {
-            if addr {
-                I2CState::Ok
-            } else {
-                I2CState::Busy
-            }
-        }) 
-    }
-
-    /// Determine if byte transfer finished (BTF)
-    pub fn is_byte_transfer_finished(&self) -> I2CState {
-        let state = self.0.sr1.read();
-        let btf = state.btf().bit_is_set();
-        self.get_error(state).if_no_err(|| {
-            if btf {I2CState::Ok} else {I2CState::Busy}
-        })
-    }
-
-    /// Determine if data register is empty (TxE)
-    pub fn is_data_register_empty(&self) -> I2CState {
-        let state = self.0.sr1.read();
-        let txe = state.tx_e().bit_is_set();
-        self.get_error(state).if_no_err(|| {
-            if txe {I2CState::Ok} else { I2CState::Busy }
-        })
-    }
-
-    /// Determine if a byte has been received which can be read from the data register (RxNE)
-    pub fn is_data_register_not_empty(&self) -> I2CState {
-        let state = self.0.sr1.read();
-        let rxne = state.rx_ne().bit_is_set();
-        self.get_error(state).if_no_err(|| {
-            if rxne { I2CState::Ok } else { I2CState::Busy }
-        })
-    }
-    #[inline(always)]
-    pub fn write_data(&self, dat : u8) -> I2CWriteState {
-        self.0.dr.write(|w| unsafe { w.bits(dat as u32) });
-        self.poll_loop(|| {self.is_data_register_empty()})
-    }
-
-    #[inline(always)]
-    pub fn start_write_async(&self, addr : u8) {
-        let dat = (addr << 1) | 1;
-        self.0.dr.write(|w| unsafe { w.bits(dat as u32) });
-    }
-
-    #[inline(always)]
-    pub fn write_async(&self, dat: u8) {
-        self.0.dr.write(|w| unsafe { w.bits(dat as u32) });
-    }
-
-    #[inline(always)]
-    pub fn start_read(&self, addr : u8) {
-        let dat = (addr << 1) | 0;
-        self.0.dr.write(|w| unsafe { w.bits(dat as u32) });
-    }
-
-    #[inline(always)]
-    pub fn read_data(&self, out: &mut u8) -> I2CReadState {
-        let state = self.poll_loop(|| { self.is_data_register_not_empty() });
-        if state.is_ok() {
-            *out = self.0.dr.read().bits() as u8;
-        }
-        state
-    }
-
-    #[inline(always)]
-    pub fn read_last_data(&self, out: &mut u8) -> I2CReadState {
-        self.0.cr1.modify(|_,w| {w.ack().clear_bit()});
-        self.read_data(out)
-    }
-
-    pub fn poll_loop<T>(&self, fun: T) -> I2CState 
-        where T : Fn() -> I2CState {
-        loop {
-            let state = fun();
-            if !state.is_busy() { return state }
-        }
-    }
-
-    /// Send the start signal and write the `addr` to the bus.
+    /// Initializes the given I2c module
     /// 
-    /// `read` specifies if it is a read request (`true`) or a write request (`false`)
-    pub fn start_polling(&self, addr : u8, read : bool) -> I2CState {
-        self.enable_start();
+    /// # Arguments
+    /// - `i2c`: The I2C module.
+    /// - `freq`: The I2c bus frequency, typically either 100 kHz (slow mode) or 400 kHz (fast mode)    
+    /// - `duty`: The duty cycle of the I2c module.
+    pub fn new<F>(i2c: S, ports: I2cBusPorts<S, R>, freq: F, clocks: Clocks, duty: I2cDutyCycle) -> Self 
+        where F: Into<Hertz> {
 
-        self.poll_loop(|| { self.is_start_flag_set() }).cont(|| {
-            self.write_data((addr << 1) + (if read { 1 } else { 0 }));
-            if read {
-                self.0.cr1.modify(|_,w| {w.pos().set_bit().ack().set_bit()});
-            }
-            self.poll_loop(|| {self.is_addr_flag_set()})
-        }).cont(|| {
-            self.0.sr2.read();
-            I2CState::Ok
-        })
-    } 
+        let freq = freq.into().0;
+        assert!(freq <= 400_000);
 
-    #[inline(always)]
-    pub fn start_write_polling(&self, addr : u8) -> I2CWriteState {
-        self.start_polling(addr, false)
-    }
+        let i2cclk = clocks.pclk1().0;
+        let freqrange = i2cclk / 1000000;
 
-    #[inline(always)]
-    pub fn start_read_polling(&self, addr: u8) -> I2CReadState {
-        let state = self.start_polling(addr, true);
-        state
-    }
+        i2c.cr2.modify(|_, w| unsafe { w.freq().bits(freqrange as u8) });
 
-    pub fn stop(&self) -> I2CState {
-        self.enable_stop();
-        I2CState::Ok
-    }
-
-    #[inline(always)]
-    pub fn is_busy(&self) -> bool {
-        let i2c = self.0;
-        i2c.sr2.read().busy().bit_is_set()
-    }
-
-    #[inline(always)]
-    pub fn enable_start(&self) {
-        let i2c = self. 0;
-        i2c.cr1.modify(|_, w| {w.start().set_bit()});
-    }
-
-    #[inline(always)]
-    fn enable_stop(&self) {
-        let i2c = self.0;
-        i2c.cr1.modify(|_, w| {w.stop().set_bit()});
-    }
-
-
-    pub fn get_state(&self) -> I2cStateOptions<'a, S> {
-        let sr1 = self.0.sr1.read();
-
-        if sr1.sb().bit_is_set() {
-            I2cStateOptions::Started(I2cState(&self.0, PhantomData))
-        } else if sr1.addr().bit_is_set() {
-            let _b = self.0.sr2.read();
-            I2cStateOptions::CanWrite(I2cState(&self.0, PhantomData))
-        } else if sr1.tx_e().bit_is_set() {
-            I2cStateOptions::CanWrite(I2cState(&self.0, PhantomData))
-        } else if sr1.rx_ne().bit_is_set() {
-            I2cStateOptions::CanRead(I2cState(&self.0, PhantomData))
+        let ratio = i2cclk / freq - 4;
+        if freq > 100_000 {
+            // slow mode
+            assert!(duty == I2cDutyCycle::Ratio1to1);
+            i2c.trise.write(|w| unsafe { w.trise().bits((freqrange + 1) as u8) });
+            let ccr = i2cclk / (freq * 2); 
+            i2c.ccr.modify(|_, w| unsafe { w.f_s().clear_bit().ccr().bits(ccr as u16) })
         } else {
-            I2cStateOptions::Unknown
+            // fast mode
+            let ccr = match duty {
+                I2cDutyCycle::Ratio1to1 => (i2cclk / (freq * 3)).max(1),
+                I2cDutyCycle::Ratio16to9 => (i2cclk / (freq * 25)).max(1),
+            };
+
+            i2c.trise.write(|w| unsafe { w.trise().bits((freqrange * 300 / 1000 + 1) as u8) });
+            i2c.ccr.modify(|_, w| unsafe { w.f_s().set_bit()
+                .duty().bit(duty == I2cDutyCycle::Ratio16to9)
+                .ccr().bits(ccr as u16) });
         }
+        
+        i2c.cr1.modify(|_, w| w.pe().set_bit());
+
+        Self {
+            i2c: i2c,
+            remapped: ports.remapped
+        }
+    }
+
+    /// Enable all I2C module interrupts.
+    pub fn listen(&mut self) {
+        self.i2c.cr2.modify(|_, w| {w.itevten().set_bit().iterren().set_bit()})
+    }
+
+    fn read_sr1(&self) -> Result<i2c1::sr1::R, Error> {
+        let sr1 = self.i2c.sr1.read();
+
+        if sr1.timeout().bit_is_set() {
+            return Err(Error::Timeout)
+        } else if sr1.af().bit_is_set() {
+            return Err(Error::AF)
+        } else if sr1.arlo().bit_is_set() {
+            return Err(Error::ARLO)
+        } else if sr1.ovr().bit_is_set() {
+            return Err(Error::OVR)
+        } else if sr1.berr().bit_is_set() {
+            return Err(Error::BERR)
+        }
+
+        Ok(sr1)
+    }
+
+    fn read_sr2(&self) -> Result<i2c1::sr2::R, Error> {
+        let sr2 = self.i2c.sr2.read();
+        Ok(sr2)
+    }
+
+    /// Try to generate a start signal. Complete using the
+    /// `start_complete` function.
+    pub fn start(&mut self) -> Result<(), Error> {
+        self.i2c.cr1.modify(|_,w| w.start().set_bit());
+        Ok(())
+    }
+
+    /// Give up control over the I2C bus. 
+    pub fn stop(&mut self) -> Result<(), Error> {
+        self.i2c.cr1.modify(|_,w| w.stop().set_bit());
+        Ok(())
+    }
+
+    /// Returns `Ok(())` once the I2C module has finished transmitting
+    /// the start signal, otherwise returns `Err(nb::Error::WouldBlock)`.
+    /// 
+    /// # Remarks
+    /// 
+    /// Use `block!(i2c.start_complete()).unwrap()` to continue polling
+    /// until the start signal is generated.
+    pub fn start_complete(&self) -> nb::Result<(), Error> {
+        match self.read_sr1() {
+            Ok(sr1) => if sr1.sb().bit_is_set() {Ok(())} else { Err(nb::Error::WouldBlock) },
+            Err(err) => Err(nb::Error::Other(err)),
+        }
+    }
+
+    /// Returns `Ok(())` if address has finished sending (master) or if 
+    /// matching address has been received (slave). Returns `Err(nb::Error::WouldBlock)`
+    /// otherwise.
+    /// 
+    /// # Remarks
+    /// 
+    /// Use `block!(i2c.addr_complete()).unwrap()` to continue polling
+    /// until event happens.
+    pub fn addr_complete(&self) -> nb::Result<(), Error> {
+        match self.read_sr1() {
+            Ok(sr1) => if sr1.addr().bit_is_set() {Ok(())} else { Err(nb::Error::WouldBlock) },
+            Err(err) => Err(nb::Error::Other(err)),
+        }
+    }
+
+    /// Returns `Ok(())` if the transmit buffer is empty. Returns `Err(nb::Error::WouldBlock)`
+    /// otherwise.
+    /// 
+    /// # Remarks
+    /// 
+    /// Use `block!(i2c.transmit_empty()).unwrap()` to continue polling
+    /// until event happens.
+    pub fn transmit_empty(&self) -> nb::Result<(), Error> {
+        match self.read_sr1() {
+            Ok(sr1) => if sr1.tx_e().bit_is_set() { Ok(()) } else { Err(nb::Error::WouldBlock) },
+            Err(err) => Err(nb::Error::Other(err))
+        }
+    }
+
+    /// Returns `Ok(())` if the receive buffer is not empty. Returns `Err(nb::Error::WouldBlock)`
+    /// otherwise.
+    /// 
+    /// # Remarks
+    /// 
+    /// Use `block!(i2c.receive_not_empty()).unwrap()` to continue polling
+    /// until event happens.
+    pub fn receive_not_empty(&self) -> nb::Result<(), Error> {
+        match self.read_sr1() {
+            Ok(sr1) => if sr1.rx_ne().bit_is_set() { Ok(()) } else { Err(nb::Error::WouldBlock) },
+            Err(err) => Err(nb::Error::Other(err))
+        }
+    }
+
+    /// Writes to the I2C data register. This function should most likely not be 
+    /// used directly.
+    pub unsafe fn write_unchecked(&mut self, dat: u8) -> Result<(), Error> {
+        self.i2c.dr.write(|w| { w.dr().bits(dat) });
+
+        Ok(())
+    }
+
+    /// Reads from the I2C data register. This should not be used directly.
+    pub unsafe fn read_unchecked(&mut self) -> Result<u8, Error> {
+        let dr = self.i2c.dr.read().dr().bits();
+        Ok(dr)
     }
 }
+
+impl<S, R> hal_i2c::Write for I2c<S, R> 
+    where S: I2C + Any, R: IsRemapped {
+
+    type Error = Error;
+
+    fn write(&mut self, addr: u8, bytes: &[u8]) -> Result<(), Error> {
+        assert!(bytes.len() > 0);
+
+        self.start()?;
+        block!(self.start_complete())?;
+
+        unsafe { self.write_unchecked(addr & 0b1111_1110)? };
+        block!(self.addr_complete())?;
+        self.read_sr2()?;
+        
+        for b in bytes {
+            block!(self.transmit_empty())?;
+            unsafe { self.write_unchecked(*b)? };
+        }
+        block!(self.transmit_empty())?;
+
+        self.stop()?;
+
+        Ok(())
+    }
+}
+
+impl<S, R> hal_i2c::WriteRead for I2c<S,R>
+    where S: I2C + Any, R: IsRemapped {
+
+    type Error = Error;
+
+    fn write_read(&mut self, addr: u8, bytes: &[u8], buffer: &mut [u8]) -> Result<(), Error> {
+        self.start()?;
+        block!(self.start_complete())?;
+
+        unsafe { self.write_unchecked(addr & 0b1111_1110)? };
+        block!(self.addr_complete())?;
+        self.read_sr2()?;
+
+        for b in bytes {
+            block!(self.transmit_empty())?;
+            unsafe { self.write_unchecked(*b)? };
+        }
+        block!(self.transmit_empty())?;
+
+        self.start()?;
+        block!(self.start_complete())?;
+        self.read_sr2()?;
+        
+        for b in buffer {
+            block!(self.receive_not_empty())?;
+            *b = unsafe { self.read_unchecked()? };
+        }
+
+        self.stop()?;
+
+        Ok(())
+    }
+}
+
+impl I2c<I2C1, NotRemapped> {
+    #[inline(always)]
+    pub fn ports_normal<M>( 
+        _pb6 : GpioPin<GPIOB, Pin6, M, PinCnf3>, 
+        _pb7 : GpioPin<GPIOB, Pin7, M, PinCnf3>,
+        _afio_i2c : AfioPeripheral<I2C1, NotRemapped>) 
+        -> I2cBusPorts<I2C1, NotRemapped> where M : PinOutput + PinMode {
+            I2cBusPorts {
+                i2c: PhantomData,
+                remapped: PhantomData,
+            }
+        }
+}
+
+impl I2c<I2C1, Remapped> {
+    #[inline(always)]
+    pub fn ports_remapped<M>( 
+        _pb8 : GpioPin<GPIOB, Pin8, M, PinCnf3>, 
+        _pb9 : GpioPin<GPIOB, Pin9, M, PinCnf3>,
+        _afio_i2c : AfioPeripheral<I2C1, Remapped>) 
+        -> I2cBusPorts<I2C1, Remapped> where M : PinOutput + PinMode {
+            I2cBusPorts {
+                i2c: PhantomData,
+                remapped: PhantomData
+            }
+        }
+}
+
