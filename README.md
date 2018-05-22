@@ -1,4 +1,4 @@
-#`tslib`
+# `tslib`
 
 This is supposed to be an implementation of the rust [embedded-hal](https://crates.io/crates/embedded-hal) package for STM32F103 microcontrollers.
 
