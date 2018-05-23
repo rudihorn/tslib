@@ -8,7 +8,7 @@
 //! let gpiob = Gpio::new(dp.GPIOB);
 //! let pinsb = gpiob.get_pins(rcc.peripherals.iopb.enable());
 //!
-//! let pb5 = pinsb.5.set_output_50MHz().set_alt_output_push_pull();
+//! let pb5 = pinsb.5.set_output_50MHz().set_output_push_pull();
 //! let pb6 = pinsb.6.set_output_50MHz().set_alt_output_push_pull();
 //! let pb7 = pinsb.7.set_input().set_floating_input();
 //! 
