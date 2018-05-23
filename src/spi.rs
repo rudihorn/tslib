@@ -1,3 +1,22 @@
+//! Serial Peripheral Interface
+//! 
+//! Used for communicating with peripheral devices.
+//! 
+//! # Example
+//! 
+//! ```
+//! let pa4 = pinsa.4.set_output_10MHz().set_alt_output_push_pull();
+//! let pa5 = pinsa.5.set_output_10MHz().set_alt_output_push_pull();
+//! let pa6 = pinsa.6.set_input().set_floating_input();
+//! let pa7 = pinsa.7.set_output_10MHz().set_alt_output_push_pull();
+//!
+//! let _spi1 = Spi::new(
+//!     &dp.SPI1, 
+//!     Spi::ports_normal(pa4, pa5, pa6, pa7, afio_periph.spi1.set_not_remapped()),
+//!     rcc.peripherals.sp1.enable(),
+//! );
+//! ```
+//! 
 
 #[allow(unused_imports)]
 use common;

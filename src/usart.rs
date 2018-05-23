@@ -1,3 +1,32 @@
+//! Serial communication 
+//! 
+//! Used for communication with serial devices. 
+//! 
+//! # Example
+//! 
+//! ```
+//! let pb6 = pinsb.6.set_output_50MHz().set_alt_output_push_pull();
+//! let pb7 = pinsb.7.set_input().set_floating_input();
+//! 
+//! let remap = afio_periph.usart1.set_remapped();
+//! let serial = Usart::new(
+//!     dp.USART1, 
+//!     Usart::ports_remapped(pb6, pb7, remap),
+//!     rcc.peripherals.usart1.enable(),
+//!     9_600.bps(),
+//!     clocks,
+//! );
+//! 
+//! let (mut tx, mut rx) = serial.split();
+//! 
+//! block!(tx.write(b'X')).ok();
+//! 
+//! loop {
+//!     let mut c = block!(rx.read()).unwrap();
+//!     c = c + 1;
+//!     block!(tx.write(c)).unwrap();
+//! }
+//! ```
 
 #[allow(unused_imports)]
 use common;

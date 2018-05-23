@@ -1,6 +1,8 @@
-// from stm32f103xx-hal
-
-//! Time units
+//! Time units.
+//! 
+//! Credits for much of this module go to: 
+//!     https://github.com/japaric/stm32f103xx-hal/blob/master/src/i2c.rs
+//! 
 
 use cortex_m::peripheral::DWT;
 

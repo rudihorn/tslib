@@ -1,3 +1,23 @@
+//! General Purpose Input/Output
+//! 
+//! Regulates pin states and values.
+//! 
+//! # Example 
+//! 
+//! ```
+//! let gpiob = Gpio::new(dp.GPIOB);
+//! let pinsb = gpiob.get_pins(rcc.peripherals.iopb.enable());
+//!
+//! let pb5 = pinsb.5.set_output_50MHz().set_alt_output_push_pull();
+//! let pb6 = pinsb.6.set_output_50MHz().set_alt_output_push_pull();
+//! let pb7 = pinsb.7.set_input().set_floating_input();
+//! 
+//! // set PB5 to high
+//! pb5.set(true);
+//! 
+//! // read the state of PB7
+//! let val = pb7.read();
+//! ```
 
 #[allow(unused_imports)]
 use common;
@@ -152,25 +172,25 @@ where G: GPIO, M: PinMode, C: PinCnf, P: Pins + PinNr {
     }
 
     #[inline(always)]
-    pub fn set_cnf_0(mut self) -> GpioPin<G, P, M, PinCnf0> {
+    fn set_cnf_0(mut self) -> GpioPin<G, P, M, PinCnf0> {
         self.set_cnf_val(0b00);
         GpioPin(self.0, PhantomData)
     }
 
     #[inline(always)]
-    pub fn set_cnf_1(mut self) -> GpioPin<G, P, M, PinCnf1> {
+    fn set_cnf_1(mut self) -> GpioPin<G, P, M, PinCnf1> {
         self.set_cnf_val(0b01);
         GpioPin(self.0, PhantomData)
     }
 
     #[inline(always)]
-    pub fn set_cnf_2(mut self) -> GpioPin<G, P, M, PinCnf2> {
+    fn set_cnf_2(mut self) -> GpioPin<G, P, M, PinCnf2> {
         self.set_cnf_val(0b10);
         GpioPin(self.0, PhantomData)
     }
 
     #[inline(always)]
-    pub fn set_cnf_3(mut self) -> GpioPin<G, P, M, PinCnf3> {
+    fn set_cnf_3(mut self) -> GpioPin<G, P, M, PinCnf3> {
         self.set_cnf_val(0b11);
         GpioPin(self.0, PhantomData)
     }

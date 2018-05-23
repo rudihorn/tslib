@@ -1,4 +1,16 @@
-
+//! Alternate Function Input/Output
+//! 
+//! Regulates remapping of pins for peripheral hardware.
+//! 
+//! # Example
+//! 
+//! ```
+//! let afio = Afio::new(&dp.AFIO, rcc.peripherals.afio.enable());
+//! let afio_periph = afio.get_peripherals(); 
+//! 
+//! let remap = afio_periph.usart1.set_remapped();
+//! ```
+ 
 #[allow(unused_imports)]
 use common;
 
