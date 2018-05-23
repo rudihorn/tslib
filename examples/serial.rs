@@ -1,3 +1,7 @@
+//! Serial interface loopback test
+//! 
+//! You have to short the TX and RX pins to make this program work
+
 #![no_std]
 #![no_main]
 #![feature(proc_macro)]

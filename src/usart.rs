@@ -13,7 +13,7 @@ use rcc;
 
 use rcc::{Clocks, RccPeripheral};
 use time::Bps;
-use gpio::{Input, PinOutput, GpioPin, Pin6, Pin7, Pin9, Pin10, PinMode, PinCnf1, PinCnf2};
+use gpio::{Input, PinOutput, GpioPin, Pin2, Pin3, Pin6, Pin7, Pin9, Pin10, PinMode, PinCnf1, PinCnf2};
 use afio::{AfioPeripheral, IsRemapped, Remapped, NotRemapped};
 use stm32f103xx::{GPIOA, GPIOB, USART1, USART2, USART3, usart1};
 
@@ -193,6 +193,20 @@ impl Usart<USART1, Remapped> {
         _pb7_rx : GpioPin<GPIOB, Pin7, Input, PinCnf1>,
         _afio : AfioPeripheral<USART1, Remapped>) 
         -> UsartBusPorts<USART1, Remapped> where M : PinOutput + PinMode {
+            UsartBusPorts {
+                usart: PhantomData,
+                remapped: PhantomData
+            }
+        }
+}
+
+impl Usart<USART2, NotRemapped> {
+    #[inline(always)]
+    pub fn ports_normal<M>( 
+        _pa2_tx : GpioPin<GPIOA, Pin2, M, PinCnf2>, 
+        _pa3_rx : GpioPin<GPIOA, Pin3, Input, PinCnf1>,
+        _afio : AfioPeripheral<USART2, Remapped>) 
+        -> UsartBusPorts<USART2, NotRemapped> where M : PinOutput + PinMode {
             UsartBusPorts {
                 usart: PhantomData,
                 remapped: PhantomData

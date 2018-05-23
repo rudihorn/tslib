@@ -1,3 +1,11 @@
+//! An experimental HAL for the STM32f103xx microcontrollers.
+//! 
+//! # Examples
+//! 
+//! See the [examples] module.
+//! 
+//! [examples]: examples/index.html
+
 #![no_std]
 #![feature(get_type_id)]
 #![feature(never_type)]
@@ -12,6 +20,9 @@ pub extern crate nb;
 
 pub extern crate embedded_hal as hal;
 pub extern crate stm32f103xx;
+
+#[cfg(feature = "doc")]
+pub mod examples;
 
 pub mod prelude;
 

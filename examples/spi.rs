@@ -1,3 +1,5 @@
+//! Example setting up SPI interface
+
 #![no_std]
 #![feature(proc_macro)]
 
