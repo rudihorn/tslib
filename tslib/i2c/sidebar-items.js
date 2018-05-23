@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["Error",""],["I2cDutyCycle",""]],"struct":[["I2c",""],["I2cBusPorts",""]],"trait":[["I2C",""]]});

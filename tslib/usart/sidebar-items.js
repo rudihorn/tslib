@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["Error","Serial error"],["Event","Interrupt event"]],"struct":[["Configured",""],["NotConfigured",""],["Usart",""],["UsartBusPorts",""],["UsartRx",""],["UsartTx",""]],"trait":[["IsConfigured",""],["USART","SPI instance that can be used with the `Spi` abstraction"]]});

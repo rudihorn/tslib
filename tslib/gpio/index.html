@@ -1,0 +1,286 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="API documentation for the Rust `gpio` mod in crate `tslib`."><meta name="keywords" content="rust, rustlang, rust-lang, gpio"><title>tslib::gpio - Rust</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css"><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script src="../../storage.js"></script></head><body class="rustdoc mod"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><p class='location'>Module gpio</p><div class="sidebar-elems"><div class="block items"><ul><li><a href="#structs">Structs</a></li><li><a href="#traits">Traits</a></li><li><a href="#types">Type Definitions</a></li></ul></div><p class='location'><a href='../index.html'>tslib</a></p><script>window.sidebarCurrent = {name: 'gpio', ty: 'mod', relpath: '../'};</script><script defer src="../sidebar-items.js"></script></div></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../../theme.js"></script><nav class="sub"><form class="search-form js-only"><div class="search-container"><input class="search-input" name="search" autocomplete="off" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><a id="settings-menu" href="../../settings.html"><img src="../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><h1 class='fqn'><span class='in-band'>Module <a href='../index.html'>tslib</a>::<wbr><a class="mod" href=''>gpio</a></span><span class='out-of-band'><span id='render-detail'><a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class='inner'>&#x2212;</span>]</a></span><a class='srclink' href='../../src/tslib/gpio.rs.html#1-290' title='goto source code'>[src]</a></span></h1><div class='docblock'><p>General Purpose Input/Output</p>
+<p>Regulates pin states and values.</p>
+<h1 id="example" class="section-header"><a href="#example">Example</a></h1>
+<pre class="rust rust-example-rendered">
+<span class="kw">let</span> <span class="ident">gpiob</span> <span class="op">=</span> <span class="ident">Gpio</span>::<span class="ident">new</span>(<span class="ident">dp</span>.<span class="ident">GPIOB</span>);
+<span class="kw">let</span> <span class="ident">pinsb</span> <span class="op">=</span> <span class="ident">gpiob</span>.<span class="ident">get_pins</span>(<span class="ident">rcc</span>.<span class="ident">peripherals</span>.<span class="ident">iopb</span>.<span class="ident">enable</span>());
+
+<span class="kw">let</span> <span class="ident">pb5</span> <span class="op">=</span> <span class="ident">pinsb</span>.<span class="number">5</span>.<span class="ident">set_output_50MHz</span>().<span class="ident">set_output_push_pull</span>();
+<span class="kw">let</span> <span class="ident">pb6</span> <span class="op">=</span> <span class="ident">pinsb</span>.<span class="number">6</span>.<span class="ident">set_output_50MHz</span>().<span class="ident">set_alt_output_push_pull</span>();
+<span class="kw">let</span> <span class="ident">pb7</span> <span class="op">=</span> <span class="ident">pinsb</span>.<span class="number">7</span>.<span class="ident">set_input</span>().<span class="ident">set_floating_input</span>();
+ 
+<span class="comment">// set PB5 to high</span>
+<span class="ident">pb5</span>.<span class="ident">set</span>(<span class="bool-val">true</span>);
+ 
+<span class="comment">// read the state of PB7</span>
+<span class="kw">let</span> <span class="ident">val</span> <span class="op">=</span> <span class="ident">pb7</span>.<span class="ident">read</span>();</pre>
+</div><h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.Enabled.html"
+                                  title='struct tslib::gpio::Enabled'>Enabled</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.Gpio.html"
+                                  title='struct tslib::gpio::Gpio'>Gpio</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.GpioPin.html"
+                                  title='struct tslib::gpio::GpioPin'>GpioPin</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.Input.html"
+                                  title='struct tslib::gpio::Input'>Input</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.NotEnabled.html"
+                                  title='struct tslib::gpio::NotEnabled'>NotEnabled</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.Output2.html"
+                                  title='struct tslib::gpio::Output2'>Output2</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.Output10.html"
+                                  title='struct tslib::gpio::Output10'>Output10</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.Output50.html"
+                                  title='struct tslib::gpio::Output50'>Output50</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.Pin0.html"
+                                  title='struct tslib::gpio::Pin0'>Pin0</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.Pin1.html"
+                                  title='struct tslib::gpio::Pin1'>Pin1</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.Pin2.html"
+                                  title='struct tslib::gpio::Pin2'>Pin2</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.Pin3.html"
+                                  title='struct tslib::gpio::Pin3'>Pin3</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.Pin4.html"
+                                  title='struct tslib::gpio::Pin4'>Pin4</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.Pin5.html"
+                                  title='struct tslib::gpio::Pin5'>Pin5</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.Pin6.html"
+                                  title='struct tslib::gpio::Pin6'>Pin6</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.Pin7.html"
+                                  title='struct tslib::gpio::Pin7'>Pin7</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.Pin8.html"
+                                  title='struct tslib::gpio::Pin8'>Pin8</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.Pin9.html"
+                                  title='struct tslib::gpio::Pin9'>Pin9</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.Pin10.html"
+                                  title='struct tslib::gpio::Pin10'>Pin10</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.Pin11.html"
+                                  title='struct tslib::gpio::Pin11'>Pin11</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.Pin12.html"
+                                  title='struct tslib::gpio::Pin12'>Pin12</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.Pin13.html"
+                                  title='struct tslib::gpio::Pin13'>Pin13</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.Pin14.html"
+                                  title='struct tslib::gpio::Pin14'>Pin14</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.Pin15.html"
+                                  title='struct tslib::gpio::Pin15'>Pin15</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.PinCnf0.html"
+                                  title='struct tslib::gpio::PinCnf0'>PinCnf0</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.PinCnf1.html"
+                                  title='struct tslib::gpio::PinCnf1'>PinCnf1</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.PinCnf2.html"
+                                  title='struct tslib::gpio::PinCnf2'>PinCnf2</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.PinCnf3.html"
+                                  title='struct tslib::gpio::PinCnf3'>PinCnf3</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr></table><h2 id='traits' class='section-header'><a href="#traits">Traits</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="trait" href="trait.GPIO.html"
+                                  title='trait tslib::gpio::GPIO'>GPIO</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="trait" href="trait.IsEnabled.html"
+                                  title='trait tslib::gpio::IsEnabled'>IsEnabled</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="trait" href="trait.PinCnf.html"
+                                  title='trait tslib::gpio::PinCnf'>PinCnf</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="trait" href="trait.PinMode.html"
+                                  title='trait tslib::gpio::PinMode'>PinMode</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="trait" href="trait.PinNr.html"
+                                  title='trait tslib::gpio::PinNr'>PinNr</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="trait" href="trait.PinOutput.html"
+                                  title='trait tslib::gpio::PinOutput'>PinOutput</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="trait" href="trait.Pins.html"
+                                  title='trait tslib::gpio::Pins'>Pins</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="trait" href="trait.PinsHigh.html"
+                                  title='trait tslib::gpio::PinsHigh'>PinsHigh</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="trait" href="trait.PinsLow.html"
+                                  title='trait tslib::gpio::PinsLow'>PinsLow</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr></table><h2 id='types' class='section-header'><a href="#types">Type Definitions</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="type" href="type.GpioPinDefault.html"
+                                  title='type tslib::gpio::GpioPinDefault'>GpioPinDefault</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr></table></section><section id="search" class="content hidden"></section><section class="footer"></section><aside id="help" class="hidden"><div><h1 class="hidden">Help</h1><div class="shortcuts"><h2>Keyboard Shortcuts</h2><dl><dt><kbd>?</kbd></dt><dd>Show this help dialog</dd><dt><kbd>S</kbd></dt><dd>Focus the search field</dd><dt><kbd>↑</kbd></dt><dd>Move up in search results</dd><dt><kbd>↓</kbd></dt><dd>Move down in search results</dd><dt><kbd>↹</kbd></dt><dd>Switch tab</dd><dt><kbd>&#9166;</kbd></dt><dd>Go to active search result</dd><dt><kbd>+</kbd></dt><dd>Expand all sections</dd><dt><kbd>-</kbd></dt><dd>Collapse all sections</dd></dl></div><div class="infos"><h2>Search Tricks</h2><p>Prefix searches with a type followed by a colon (e.g. <code>fn:</code>) to restrict the search to a given type.</p><p>Accepted types are: <code>fn</code>, <code>mod</code>, <code>struct</code>, <code>enum</code>, <code>trait</code>, <code>type</code>, <code>macro</code>, and <code>const</code>.</p><p>Search functions by type signature (e.g. <code>vec -> usize</code> or <code>* -> vec</code>)</p><p>Search multiple things at once by splitting your query with comma (e.g. <code>str,u8</code> or <code>String,struct:Vec,test</code>)</p></div></div></aside><script>window.rootPath = "../../";window.currentCrate = "tslib";</script><script src="../../aliases.js"></script><script src="../../main.js"></script><script defer src="../../search-index.js"></script></body></html>

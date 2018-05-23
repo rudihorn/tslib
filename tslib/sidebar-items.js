@@ -1,0 +1,1 @@
+initSidebarItems({"mod":[["afio","Alternate Function Input/Output"],["common",""],["examples","Examples"],["flash","Flash memory"],["gpio","General Purpose Input/Output"],["i2c","I2C Bus"],["prelude",""],["rcc",""],["spi","Serial Peripheral Interface"],["time","Time units."],["usart","Serial communication "]]});

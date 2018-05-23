@@ -1,0 +1,13 @@
+var ALIASES = {};
+ALIASES['aligned'] = {};
+ALIASES['bare_metal'] = {};
+ALIASES['cortex_m'] = {};
+ALIASES['cortex_m_rt'] = {};
+ALIASES['embedded_hal'] = {};
+ALIASES['nb'] = {};
+ALIASES['r0'] = {};
+ALIASES['stm32f103xx'] = {};
+ALIASES['tslib'] = {};
+ALIASES['vcell'] = {};
+ALIASES['void'] = {};
+ALIASES['volatile_register'] = {};
